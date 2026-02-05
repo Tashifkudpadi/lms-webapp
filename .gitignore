@@ -214,6 +214,8 @@ temp/
 minio-data/
 uploads/
 local-storage/
+data/
+!data/.gitkeep
 
 # ============ Testing ============
 .pytest_cache/
