@@ -163,8 +163,9 @@ const courseSlice = createSlice({
       })
       .addCase(deleteCourse.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = state.list.filter((c) => c.id !== action.payload.id);
-        if (state.selected && state.selected.id === action.payload.id) {
+        const deletedId = Number(action.payload.id);
+        state.list = state.list.filter((c) => c.id !== deletedId);
+        if (state.selected && state.selected.id === deletedId) {
           state.selected = null;
         }
         state.error = null;

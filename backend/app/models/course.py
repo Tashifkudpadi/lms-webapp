@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Table, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql.sqltypes import TIMESTAMP
@@ -11,6 +11,7 @@ course_batch = Table(
     Base.metadata,
     Column("course_id", Integer, ForeignKey("courses.id", ondelete="CASCADE")),
     Column("batch_id", Integer, ForeignKey("batches.id", ondelete="CASCADE")),
+    UniqueConstraint("course_id", "batch_id", name="uq_course_batch"),
 )
 
 course_student = Table(
@@ -19,6 +20,7 @@ course_student = Table(
     Column("course_id", Integer, ForeignKey("courses.id", ondelete="CASCADE")),
     Column("student_id", Integer, ForeignKey(
         "students.id", ondelete="CASCADE")),
+    UniqueConstraint("course_id", "student_id", name="uq_course_student"),
 )
 
 course_faculty = Table(
@@ -27,6 +29,7 @@ course_faculty = Table(
     Column("course_id", Integer, ForeignKey("courses.id", ondelete="CASCADE")),
     Column("faculty_id", Integer, ForeignKey(
         "faculties.id", ondelete="CASCADE")),
+    UniqueConstraint("course_id", "faculty_id", name="uq_course_faculty"),
 )
 
 course_subject = Table(
@@ -35,6 +38,7 @@ course_subject = Table(
     Column("course_id", Integer, ForeignKey("courses.id", ondelete="CASCADE")),
     Column("subject_id", Integer, ForeignKey(
         "subjects.id", ondelete="CASCADE")),
+    UniqueConstraint("course_id", "subject_id", name="uq_course_subject"),
 )
 
 course_topic = Table(
@@ -42,6 +46,7 @@ course_topic = Table(
     Base.metadata,
     Column("course_id", Integer, ForeignKey("courses.id", ondelete="CASCADE")),
     Column("topic_id", Integer, ForeignKey("topics.id", ondelete="CASCADE")),
+    UniqueConstraint("course_id", "topic_id", name="uq_course_topic"),
 )
 
 

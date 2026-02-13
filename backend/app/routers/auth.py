@@ -75,12 +75,29 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     db.commit()
     access_token = create_access_token(
         data={"sub": db_user.email, "role": db_user.role.value})
+
+    # Get student_id or faculty_id based on role
+    student_id = None
+    faculty_id = None
+    if db_user.role.value == "student":
+        from app.models.student import Student
+        student = db.query(Student).filter(Student.email == db_user.email).first()
+        if student:
+            student_id = student.id
+    elif db_user.role.value == "faculty":
+        from app.models.faculty import Faculty
+        faculty = db.query(Faculty).filter(Faculty.email == db_user.email).first()
+        if faculty:
+            faculty_id = faculty.id
+
     return {
         "id": db_user.id,
         "first_name": db_user.first_name,
         "last_name": db_user.last_name,
         "email": db_user.email,
         "role": db_user.role.value,
+        "student_id": student_id,
+        "faculty_id": faculty_id,
         "access_token": access_token,
         "token_type": "bearer",
     }

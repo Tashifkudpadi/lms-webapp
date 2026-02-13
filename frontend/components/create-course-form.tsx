@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -21,15 +22,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Upload, BookOpen, Globe, ImageIcon } from "lucide-react";
+import { Plus, Upload, BookOpen, Globe, ImageIcon, X, Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store";
 import { fetchBatches } from "@/store/batches";
-import { fetchSubjects } from "@/store/subjects";
 import { fetchStudents } from "@/store/students";
 import { fetchFaculties } from "@/store/faculties";
 import { MultiSelect } from "@/components/ui/multi-select"; // ✅ your component
 import { clearError, createCourse } from "@/store/courses";
+import { uploadToMinio } from "@/utils/uploadToMinio";
+import Image from "next/image";
 
 interface CreateCourseFormProps {
   children: React.ReactNode;
@@ -37,15 +39,17 @@ interface CreateCourseFormProps {
 
 export default function CreateCourseForm({ children }: CreateCourseFormProps) {
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [courseImage, setCourseImage] = useState<string>("");
   const [isPublic, setIsPublic] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ selections state
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
 
   // ✅ get data from Redux store
@@ -58,25 +62,49 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
   const batches = useAppSelector(
     (state: RootState) => state.batchesReducer.batches
   );
-  const subjects = useAppSelector(
-    (state: RootState) => state.subjectsReducer.subjects
-  );
   const { error } = useAppSelector((state: RootState) => state.coursesReducer);
 
   useEffect(() => {
     if (!open) return;
     dispatch(fetchBatches());
-    dispatch(fetchSubjects());
     dispatch(fetchStudents());
     dispatch(fetchFaculties());
   }, [dispatch, open]);
 
-  console.log(
-    selectedStudents,
-    selectedFaculties,
-    selectedSubjects,
-    selectedBatches
-  );
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image file (PNG, JPG, etc.)", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image size should be less than 2MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { fileUrl } = await uploadToMinio(file);
+      setCourseImage(fileUrl);
+    } catch (err) {
+      console.error("Failed to upload image:", err);
+      toast({ title: "Upload failed", description: "Failed to upload image. Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setCourseImage("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,7 +115,6 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
       course_desc: (event.target as any).description.value,
       student_ids: selectedStudents.map((id) => Number(id)),
       faculty_ids: selectedFaculties.map((id) => Number(id)),
-      subject_ids: selectedSubjects.map((id) => Number(id)),
       batch_ids: selectedBatches.map((id) => Number(id)),
       is_active: true,
       is_public: isPublic,
@@ -102,7 +129,6 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
       setSelectedBatches([]);
       setSelectedFaculties([]);
       setSelectedStudents([]);
-      setSelectedSubjects([]);
       setCourseImage("");
     } catch (err) {
       setIsLoading(false);
@@ -186,19 +212,6 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Subjects *</Label>
-                  <MultiSelect
-                    options={subjects.map((sub) => ({
-                      label: sub.name,
-                      value: sub.id.toString(),
-                    }))}
-                    selected={selectedSubjects}
-                    onChange={setSelectedSubjects}
-                    placeholder="Select subjects..."
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label>Batches *</Label>
                   <MultiSelect
                     options={batches.map((b) => ({
@@ -240,20 +253,64 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-slate-700 font-medium">
-                      Course Image
+                      Course Thumbnail
                     </Label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-white/30">
-                      <ImageIcon className="mx-auto h-12 w-12 text-slate-400" />
-                      <div className="mt-2">
-                        <Button type="button" variant="outline" size="sm">
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Image
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="course-image-upload"
+                    />
+                    {courseImage ? (
+                      <div className="relative border-2 border-slate-300 rounded-lg overflow-hidden bg-white/30">
+                        <div className="relative h-40 w-full">
+                          <Image
+                            src={courseImage}
+                            alt="Course thumbnail preview"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8"
+                          onClick={handleRemoveImage}
+                        >
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-slate-500 mt-2">
-                        PNG, JPG up to 2MB
-                      </p>
-                    </div>
+                    ) : (
+                      <div
+                        className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-white/30 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <>
+                            <Loader2 className="mx-auto h-12 w-12 text-blue-500 animate-spin" />
+                            <p className="text-sm text-slate-600 mt-2">
+                              Uploading...
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="mx-auto h-12 w-12 text-slate-400" />
+                            <div className="mt-2">
+                              <Button type="button" variant="outline" size="sm">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Image
+                              </Button>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">
+                              PNG, JPG up to 2MB
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

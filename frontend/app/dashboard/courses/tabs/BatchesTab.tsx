@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +50,9 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
   const [addingBatch, setAddingBatch] = useState(false);
   const [error, setError] = useState("");
 
+  const confirm = useConfirm();
+  const { toast } = useToast();
+
   const fetchCourseBatches = useCallback(async () => {
     try {
       setLoading(true);
@@ -74,16 +79,14 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
   }, [fetchCourseBatches]);
 
   const handleRemoveBatch = async (batch: CourseBatch) => {
-    const ok = window.confirm(
-      `Remove batch "${batch.name}" from this course? This will not delete the batch itself, only unlink it from this course.`
-    );
+    const ok = await confirm({ title: "Remove Batch", description: `Remove batch "${batch.name}" from this course? This will not delete the batch itself, only unlink it from this course.`, confirmLabel: "Remove", variant: "destructive" });
     if (!ok) return;
 
     try {
       await axiosInstance.delete(`/courses/${courseId}/batches/${batch.id}`);
       await fetchCourseBatches();
     } catch (e: any) {
-      alert(e?.response?.data?.detail || "Failed to remove batch");
+      toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove batch", variant: "destructive" });
     }
   };
 

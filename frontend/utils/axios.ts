@@ -1,8 +1,10 @@
 // lib/axios.ts
 
 import axios from "axios";
-import { store } from "@/store";
-import { setGlobalError } from "@/store/globalError";
+
+// Note: Global error handling is done via store middleware (globalErrorMiddleware)
+// which catches all rejected async thunks. Do NOT import store here to avoid
+// circular dependency (axios -> store -> reducers -> axios).
 
 // Create a base Axios instance
 const axiosInstance = axios.create({
@@ -46,47 +48,8 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn("Unauthorized - possibly invalid token");
     }
-    try {
-      const res = error.response;
-      const cfg = error.config || {};
-      const url = (cfg?.baseURL || "") + (cfg?.url || "");
-      const method = (cfg?.method || "GET").toString().toUpperCase();
-      const status = res?.status;
-      const statusText = res?.statusText;
-      const data = res?.data;
-
-      const backendDetail =
-        (typeof data?.detail === "string" && data.detail) ||
-        (Array.isArray(data?.detail) && "Validation error(s)") ||
-        data?.message ||
-        error.message ||
-        "Network error";
-
-      // Only keep JSON-serializable primitives / plain objects in Redux
-      const safeData =
-        data && typeof data === "object"
-          ? {
-              // commonly useful fields from typical FastAPI/DRF error shapes
-              detail: data.detail ?? undefined,
-              message: data.message ?? undefined,
-            }
-          : data;
-
-      const payload = {
-        message: backendDetail,
-        detail: {
-          status,
-          statusText,
-          method,
-          url,
-          data: safeData,
-        },
-      } as const;
-
-      store.dispatch(setGlobalError(payload));
-    } catch (_) {
-      // noop if store is not available for any reason
-    }
+    // Global error dispatching is handled by store middleware (globalErrorMiddleware)
+    // which catches all rejected async thunks automatically
     return Promise.reject(error);
   }
 );

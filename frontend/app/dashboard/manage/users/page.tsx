@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -47,6 +48,7 @@ import { User } from "@/store/types";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const { users, loading, error } = useAppSelector(
     (state) => state.userReducer
   );
@@ -118,7 +120,8 @@ export default function UsersPage() {
 
   // Handle delete user
   const handleDelete = async (userId: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    const ok = await confirm({ title: "Delete User", description: "Are you sure you want to delete this user?", confirmLabel: "Delete", variant: "destructive" });
+    if (!ok) return;
     dispatch(clearError());
     await dispatch(deleteUser(userId));
   };

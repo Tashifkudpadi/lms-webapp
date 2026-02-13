@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 import json
 
@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.test import (
     Test, TestSubCategory, TestQuestion, TestQuestionOption,
     TestAttempt, TestAnswer, ExamTypeEnum, TestCategoryEnum,
-    TestStatusEnum, AttemptStatusEnum
+    TestStatusEnum, AttemptStatusEnum, ActivationMethodEnum
 )
 from app.models.student import Student
 from app.models.faculty import Faculty
@@ -25,7 +25,7 @@ from app.schemas.test import (
     TestAttemptCreate, TestAttemptSubmit, TestAttemptOut, TestAttemptWithAnswers,
     TestResultSummary, MainsEvaluationCreate, QuestionImportResult, TestStatistics,
     StudentWithAttemptStatus,
-    ExamType, TestCategory, TestStatus, AttemptStatus
+    ExamType, TestCategory, TestStatus, AttemptStatus, ActivationMethod
 )
 
 router = APIRouter()
@@ -41,6 +41,8 @@ def build_test_out(test: Test) -> TestOut:
         category=TestCategory(test.category.value),
         sub_category_id=test.sub_category_id,
         sub_category_name=test.sub_category.name if test.sub_category else None,
+        activation_method=ActivationMethod(test.activation_method.value) if test.activation_method else ActivationMethod.MANUAL,
+        shuffle_questions=test.shuffle_questions or False,
         status=TestStatus(test.status.value),
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
@@ -69,6 +71,7 @@ def build_test_list_out(test: Test) -> TestListOut:
         exam_type=ExamType(test.exam_type.value),
         category=TestCategory(test.category.value),
         sub_category_name=test.sub_category.name if test.sub_category else None,
+        activation_method=ActivationMethod(test.activation_method.value) if test.activation_method else ActivationMethod.MANUAL,
         status=TestStatus(test.status.value),
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
@@ -371,6 +374,9 @@ def get_my_tests(
                         show_test = True
 
         if show_test:
+            # Students can only see PUBLISHED tests
+            if current_user.role == Role.STUDENT and test.status != TestStatusEnum.PUBLISHED:
+                continue
             filtered_tests.append(test)
 
     return [build_test_list_out(t) for t in filtered_tests]
@@ -468,6 +474,8 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db))
         test.end_datetime = update.end_datetime
     if update.instructions is not None:
         test.instructions = update.instructions
+    if update.shuffle_questions is not None:
+        test.shuffle_questions = update.shuffle_questions
     if update.question_file_url is not None:
         test.question_file_url = update.question_file_url
     if update.question_file_name is not None:
@@ -782,6 +790,20 @@ def start_test_attempt(test_id: int, student_id: int, db: Session = Depends(get_
     if test.status != TestStatusEnum.PUBLISHED:
         raise HTTPException(status_code=400, detail="Test is not published")
 
+    # Check activation window
+    now = datetime.now(timezone.utc)
+
+    if test.activation_method == ActivationMethodEnum.MANUAL:
+        # Manual: check only end_datetime
+        if test.end_datetime and now > test.end_datetime:
+            raise HTTPException(status_code=400, detail="Test has expired. The deadline has passed.")
+    elif test.activation_method == ActivationMethodEnum.SCHEDULED:
+        # Scheduled: check both start and end
+        if test.start_datetime and now < test.start_datetime:
+            raise HTTPException(status_code=400, detail="Test has not started yet. Please come back at the scheduled time.")
+        if test.end_datetime and now > test.end_datetime:
+            raise HTTPException(status_code=400, detail="Test has expired. The deadline has passed.")
+
     # Check if student has access
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
@@ -826,7 +848,7 @@ def start_test_attempt(test_id: int, student_id: int, db: Session = Depends(get_
         test_id=test_id,
         student_id=student_id,
         status=AttemptStatusEnum.IN_PROGRESS,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         total_questions=len(test.questions) if test.category == TestCategoryEnum.PRELIMS else None,
     )
     db.add(attempt)
@@ -876,10 +898,17 @@ def submit_test_attempt(
         raise HTTPException(status_code=400, detail="Attempt already submitted")
 
     test = attempt.test
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
-    # Calculate time taken
-    time_taken = int((now - attempt.started_at).total_seconds()) if attempt.started_at else 0
+    # Calculate time taken - handle both naive and aware datetimes
+    if attempt.started_at:
+        started = attempt.started_at
+        # If started_at is naive, make it aware
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        time_taken = int((now - started).total_seconds())
+    else:
+        time_taken = 0
 
     attempt.submitted_at = now
     attempt.time_taken_seconds = time_taken
@@ -1131,7 +1160,7 @@ def evaluate_mains_attempt(
     attempt.percentage = (data.score / test.total_marks * 100) if test.total_marks > 0 else 0
     attempt.evaluation_remarks = data.remarks
     attempt.evaluated_by = evaluator_id
-    attempt.evaluated_at = datetime.utcnow()
+    attempt.evaluated_at = datetime.now(timezone.utc)
     attempt.status = AttemptStatusEnum.EVALUATED
 
     db.commit()

@@ -3,6 +3,8 @@
 import { Provider } from "react-redux";
 import { store } from "../store";
 import GlobalErrorDialog from "@/components/GlobalErrorDialog";
+import { ConfirmDialogProvider } from "@/components/confirm-dialog-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function ClientProvider({
   children,
@@ -11,8 +13,11 @@ export default function ClientProvider({
 }) {
   return (
     <Provider store={store}>
-      {children}
-      <GlobalErrorDialog />
+      <ConfirmDialogProvider>
+        {children}
+        <GlobalErrorDialog />
+        <Toaster />
+      </ConfirmDialogProvider>
     </Provider>
   );
 }

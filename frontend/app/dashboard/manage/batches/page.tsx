@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -33,6 +34,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function BatchesPage() {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const { batches, loading, error } = useAppSelector(
     (state) => state.batchesReducer
   );
@@ -100,7 +102,8 @@ export default function BatchesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Delete this batch?")) {
+    const ok = await confirm({ title: "Delete Batch", description: "Are you sure you want to delete this batch?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       await dispatch(deleteBatch(id));
     }
   };

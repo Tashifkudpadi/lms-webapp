@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,10 +33,12 @@ import {
   startTestAttempt,
   submitTestAttempt,
   TestCategory,
+  TestQuestion,
 } from "@/store/tests";
 import { uploadToMinio } from "@/utils/uploadToMinio";
 
 export default function TakeTestPage() {
+  const { toast } = useToast();
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -53,6 +56,9 @@ export default function TakeTestPage() {
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Shuffled questions
+  const [shuffledQuestions, setShuffledQuestions] = useState<TestQuestion[]>([]);
 
   // Mains specific
   const [answerFile, setAnswerFile] = useState<File | null>(null);
@@ -93,11 +99,27 @@ export default function TakeTestPage() {
     };
   }, [started, timeLeft]);
 
+  // Fisher-Yates shuffle
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const handleStartTest = async () => {
-    // Use student_id if available (for student role), otherwise use user id
-    const studentId = user?.student_id || user?.id;
+    // For students, we need the student_id from the students table
+    if (!user) {
+      toast({ title: "Authentication required", description: "Please log in to take the test", variant: "destructive" });
+      return;
+    }
+
+    // Check if user is a student and has student_id
+    const studentId = user.student_id;
     if (!studentId) {
-      alert("Please log in to take the test");
+      toast({ title: "Profile not linked", description: "Your account is not linked to a student profile. Please log out and log in again, or contact an administrator.", variant: "destructive" });
       return;
     }
 
@@ -107,11 +129,23 @@ export default function TakeTestPage() {
       ).unwrap();
       setAttemptId(result.id);
       setStarted(true);
+      // Shuffle questions if enabled
+      if (test?.shuffle_questions && test?.questions) {
+        setShuffledQuestions(shuffleArray(test.questions));
+      } else {
+        setShuffledQuestions(test?.questions || []);
+      }
       if (test?.duration_minutes) {
         setTimeLeft(test.duration_minutes * 60);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to start test:", err);
+      // Extract backend error message from axios error response
+      const backendMessage = err?.response?.data?.detail;
+      const errorMessage = typeof backendMessage === "string"
+        ? backendMessage
+        : err?.message || "Failed to start test. Please try again.";
+      toast({ title: "Failed to start test", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -153,11 +187,12 @@ export default function TakeTestPage() {
         setUploading(false);
       }
 
-      // Submit test with answers
-      const answersArray = test?.questions?.map((q) => ({
+      // Submit test with answers (use shuffledQuestions to include all questions)
+      const questionsToSubmit = shuffledQuestions.length > 0 ? shuffledQuestions : test?.questions || [];
+      const answersArray = questionsToSubmit.map((q) => ({
         question_id: q.id,
         selected_option: answers.get(q.id) || null,
-      })) || [];
+      }));
 
       await dispatch(
         submitTestAttempt({
@@ -192,7 +227,7 @@ export default function TakeTestPage() {
   };
 
   const getAnsweredCount = () => answers.size;
-  const getTotalQuestions = () => test?.questions?.length || 0;
+  const getTotalQuestions = () => shuffledQuestions.length || test?.questions?.length || 0;
 
   if (loading || !test) {
     return (
@@ -410,8 +445,9 @@ export default function TakeTestPage() {
     );
   }
 
-  // Prelims test interface (MCQ)
-  const currentQ = test.questions?.[currentQuestion];
+  // Prelims test interface (MCQ) - use shuffled questions
+  const displayQuestions = shuffledQuestions.length > 0 ? shuffledQuestions : test.questions || [];
+  const currentQ = displayQuestions[currentQuestion];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
@@ -449,7 +485,7 @@ export default function TakeTestPage() {
         <div className="fixed left-0 top-20 bottom-0 w-64 bg-white shadow-md p-4 overflow-y-auto">
           <h3 className="font-medium mb-3">Questions</h3>
           <div className="grid grid-cols-5 gap-2">
-            {test.questions?.map((q, idx) => (
+            {displayQuestions.map((q, idx) => (
               <button
                 key={q.id}
                 onClick={() => setCurrentQuestion(idx)}
@@ -558,10 +594,10 @@ export default function TakeTestPage() {
                     <Button
                       onClick={() =>
                         setCurrentQuestion((prev) =>
-                          Math.min((test.questions?.length || 1) - 1, prev + 1)
+                          Math.min(displayQuestions.length - 1, prev + 1)
                         )
                       }
-                      disabled={currentQuestion === (test.questions?.length || 1) - 1}
+                      disabled={currentQuestion === displayQuestions.length - 1}
                     >
                       Next
                       <ChevronRight className="w-4 h-4 ml-2" />

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +46,8 @@ type Student = {
 };
 
 export default function LearnersTab({ courseId }: { courseId: string | number }) {
+  const confirm = useConfirm();
+  const { toast } = useToast();
   const [learners, setLearners] = useState<Learner[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +88,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
         ? `Remove "${learner.name}" from batch "${learner.batch_name}"? This will remove them from all courses linked to this batch.`
         : `Remove "${learner.name}" from this course?`;
 
-    const ok = window.confirm(message);
+    const ok = await confirm({ title: "Remove Learner", description: message, confirmLabel: "Remove", variant: "destructive" });
     if (!ok) return;
 
     try {
@@ -94,7 +98,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
       );
       await fetchLearners();
     } catch (e: any) {
-      alert(e?.response?.data?.detail || "Failed to remove learner");
+      toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove learner", variant: "destructive" });
     }
   };
 

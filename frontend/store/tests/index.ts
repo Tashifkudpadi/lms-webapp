@@ -18,6 +18,11 @@ export enum TestStatus {
   ARCHIVED = "ARCHIVED",
 }
 
+export enum ActivationMethod {
+  MANUAL = "MANUAL",
+  SCHEDULED = "SCHEDULED",
+}
+
 export enum AttemptStatus {
   NOT_STARTED = "NOT_STARTED",
   IN_PROGRESS = "IN_PROGRESS",
@@ -65,6 +70,8 @@ export interface Test {
   category: TestCategory;
   sub_category_id?: number;
   sub_category_name?: string;
+  activation_method: ActivationMethod;
+  shuffle_questions: boolean;
   status: TestStatus;
   duration_minutes?: number;
   total_marks: number;
@@ -91,6 +98,7 @@ export interface TestListItem {
   exam_type: ExamType;
   category: TestCategory;
   sub_category_name?: string;
+  activation_method: ActivationMethod;
   status: TestStatus;
   duration_minutes?: number;
   total_marks: number;

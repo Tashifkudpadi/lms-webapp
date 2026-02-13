@@ -21,6 +21,11 @@ class TestStatus(str, Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class ActivationMethod(str, Enum):
+    MANUAL = "MANUAL"
+    SCHEDULED = "SCHEDULED"
+
+
 class AttemptStatus(str, Enum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
@@ -121,6 +126,8 @@ class TestBase(BaseModel):
     exam_type: ExamType
     category: TestCategory
     sub_category_id: Optional[int] = None
+    activation_method: ActivationMethod = ActivationMethod.MANUAL
+    shuffle_questions: bool = False
     duration_minutes: Optional[int] = None
     total_marks: float = 0
     passing_marks: Optional[float] = None
@@ -144,6 +151,8 @@ class TestUpdate(BaseModel):
     test_name: Optional[str] = None
     description: Optional[str] = None
     sub_category_id: Optional[int] = None
+    activation_method: Optional[ActivationMethod] = None
+    shuffle_questions: Optional[bool] = None
     status: Optional[TestStatus] = None
     duration_minutes: Optional[int] = None
     total_marks: Optional[float] = None
@@ -186,6 +195,7 @@ class TestListOut(BaseModel):
     exam_type: ExamType
     category: TestCategory
     sub_category_name: Optional[str] = None
+    activation_method: ActivationMethod = ActivationMethod.MANUAL
     status: TestStatus
     duration_minutes: Optional[int] = None
     total_marks: float

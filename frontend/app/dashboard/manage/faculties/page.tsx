@@ -1,6 +1,7 @@
 // FacultiesPage.tsx
 "use client";
 
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -48,6 +49,7 @@ interface Faculty {
 
 export default function FacultiesPage() {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const { faculty, error } = useAppSelector((state) => state.facultyReducer);
   const { subjects } = useAppSelector((state) => state.subjectsReducer);
   console.log("subjects", subjects);
@@ -106,8 +108,9 @@ export default function FacultiesPage() {
     setIsEditDialogOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this faculty?")) {
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({ title: "Delete Faculty", description: "Are you sure you want to delete this faculty?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       dispatch(deleteFaculty(id));
     }
   };

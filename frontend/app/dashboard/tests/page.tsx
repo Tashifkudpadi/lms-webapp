@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +30,13 @@ import {
   FileText,
   Plus,
   Search,
-  Eye,
-  Edit,
   Trash2,
   GraduationCap,
   BookOpen,
   FolderPlus,
+  Play,
 } from "lucide-react";
+import Link from "next/link";
 import { RootState, AppDispatch } from "@/store";
 import {
   fetchMyTests,
@@ -46,6 +47,7 @@ import {
   ExamType,
   TestCategory,
   TestStatus,
+  ActivationMethod,
   TestListItem,
 } from "@/store/tests";
 import { fetchBatches } from "@/store/batches";
@@ -54,11 +56,14 @@ import { fetchStudents } from "@/store/students";
 import { fetchFaculties } from "@/store/faculties";
 
 export default function TestsPage() {
+  const confirm = useConfirm();
   const dispatch = useDispatch<AppDispatch>();
   const testsState = useSelector((state: RootState) => state.testsReducer);
   const tests = testsState?.tests || [];
   const subCategories = testsState?.subCategories || [];
   const loading = testsState?.loading || false;
+  const user = useSelector((state: RootState) => state.authReducer?.user);
+  const userRole = user?.role || "student";
   const batches = useSelector(
     (state: RootState) => state.batchesReducer?.batches || [],
   );
@@ -94,10 +99,13 @@ export default function TestsPage() {
     exam_type: ExamType.UPSC,
     category: TestCategory.PRELIMS,
     sub_category_id: null as number | null,
+    activation_method: ActivationMethod.MANUAL,
     duration_minutes: 60,
     total_marks: 100,
     passing_marks: 40,
     negative_marking: 0.25,
+    start_datetime: "",
+    end_datetime: "",
     instructions: "",
     batch_ids: [] as number[],
     student_ids: [] as number[],
@@ -150,15 +158,13 @@ export default function TestsPage() {
 
   const handleCreateTest = async () => {
     try {
-      await dispatch(
-        createTest({
-          ...newTest,
-          sub_category_id:
-            selectedCategory === TestCategory.PRELIMS
-              ? newTest.sub_category_id
-              : undefined,
-        }),
-      ).unwrap();
+      const payload: any = {
+        ...newTest,
+        sub_category_id: newTest.sub_category_id ?? undefined,
+        start_datetime: newTest.start_datetime || undefined,
+        end_datetime: newTest.end_datetime || undefined,
+      };
+      await dispatch(createTest(payload)).unwrap();
       setShowCreateTest(false);
       setNewTest({
         test_name: "",
@@ -166,10 +172,13 @@ export default function TestsPage() {
         exam_type: selectedExamType,
         category: selectedCategory,
         sub_category_id: null,
+        activation_method: ActivationMethod.MANUAL,
         duration_minutes: 60,
         total_marks: 100,
         passing_marks: 40,
         negative_marking: 0.25,
+        start_datetime: "",
+        end_datetime: "",
         instructions: "",
         batch_ids: [],
         student_ids: [],
@@ -197,7 +206,8 @@ export default function TestsPage() {
   };
 
   const handleDeleteTest = async (testId: number) => {
-    if (window.confirm("Are you sure you want to delete this test?")) {
+    const ok = await confirm({ title: "Delete Test", description: "Are you sure you want to delete this test?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       try {
         await dispatch(deleteTest(testId)).unwrap();
       } catch (err) {
@@ -265,11 +275,17 @@ export default function TestsPage() {
             setSelectedSubCategory(null);
           }}
         >
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-gradient-to-r from-blue-100 to-purple-100">
-            <TabsTrigger value={ExamType.UPSC} className="font-semibold">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200">
+            <TabsTrigger
+              value={ExamType.UPSC}
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            >
               UPSC
             </TabsTrigger>
-            <TabsTrigger value={ExamType.TNPSC} className="font-semibold">
+            <TabsTrigger
+              value={ExamType.TNPSC}
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            >
               TNPSC
             </TabsTrigger>
           </TabsList>
@@ -284,41 +300,49 @@ export default function TestsPage() {
               }}
             >
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <TabsList className="bg-white shadow-sm">
-                  <TabsTrigger value={TestCategory.PRELIMS}>
+                <TabsList className="bg-slate-100 p-1 rounded-lg shadow-sm">
+                  <TabsTrigger
+                    value={TestCategory.PRELIMS}
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-md transition-all"
+                  >
                     <BookOpen className="w-4 h-4 mr-2" />
                     Prelims
                   </TabsTrigger>
-                  <TabsTrigger value={TestCategory.MAINS}>
+                  <TabsTrigger
+                    value={TestCategory.MAINS}
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-md transition-all"
+                  >
                     <FileText className="w-4 h-4 mr-2" />
                     Mains
                   </TabsTrigger>
                 </TabsList>
 
-                <div className="flex gap-2">
-                  {selectedCategory === TestCategory.PRELIMS && (
+                {userRole !== "student" && (
+                  <div className="flex gap-2">
+                    {selectedCategory === TestCategory.PRELIMS && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setNewSubCategory({
+                            ...newSubCategory,
+                            exam_type: selectedExamType,
+                          });
+                          setShowCreateSubCategory(true);
+                        }}
+                      >
+                        <FolderPlus className="w-4 h-4 mr-2" />
+                        Add Sub-Category
+                      </Button>
+                    )}
                     <Button
-                      variant="outline"
-                      onClick={() => {
-                        setNewSubCategory({
-                          ...newSubCategory,
-                          exam_type: selectedExamType,
-                        });
-                        setShowCreateSubCategory(true);
-                      }}
+                      onClick={openCreateTestDialog}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                     >
-                      <FolderPlus className="w-4 h-4 mr-2" />
-                      Add Sub-Category
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Test
                     </Button>
-                  )}
-                  <Button
-                    onClick={openCreateTestDialog}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Test
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Prelims Content */}
@@ -374,6 +398,7 @@ export default function TestsPage() {
                         test={test}
                         onDelete={() => handleDeleteTest(test.id)}
                         getStatusBadge={getStatusBadge}
+                        userRole={userRole}
                       />
                     ))
                   ) : (
@@ -411,6 +436,7 @@ export default function TestsPage() {
                         onDelete={() => handleDeleteTest(test.id)}
                         getStatusBadge={getStatusBadge}
                         isMains
+                        userRole={userRole}
                       />
                     ))
                   ) : (
@@ -460,32 +486,52 @@ export default function TestsPage() {
                 />
               </div>
 
-              {selectedCategory === TestCategory.PRELIMS &&
-                filteredSubCategories.length > 0 && (
-                  <div>
-                    <Label>Sub-Category</Label>
-                    <Select
-                      value={newTest.sub_category_id?.toString() || ""}
-                      onValueChange={(v) =>
-                        setNewTest({
-                          ...newTest,
-                          sub_category_id: v ? parseInt(v) : null,
-                        })
-                      }
+              <div>
+                <Label>Sub-Category</Label>
+                {filteredSubCategories.length > 0 ? (
+                  <Select
+                    value={newTest.sub_category_id?.toString() || ""}
+                    onValueChange={(v) =>
+                      setNewTest({
+                        ...newTest,
+                        sub_category_id: v ? parseInt(v) : null,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sub-category (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredSubCategories.map((sc) => (
+                        <SelectItem key={sc.id} value={sc.id.toString()}>
+                          {sc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      No sub-categories available.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-blue-600"
+                      onClick={() => {
+                        setNewSubCategory({
+                          ...newSubCategory,
+                          exam_type: selectedExamType,
+                        });
+                        setShowCreateSubCategory(true);
+                      }}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sub-category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredSubCategories.map((sc) => (
-                          <SelectItem key={sc.id} value={sc.id.toString()}>
-                            {sc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      Create one
+                    </Button>
                   </div>
                 )}
+              </div>
 
               <div>
                 <Label>Duration (minutes)</Label>
@@ -545,6 +591,82 @@ export default function TestsPage() {
                   />
                 </div>
               )}
+
+              {/* Activation Method */}
+              <div className="col-span-2 border-t pt-4">
+                <h4 className="font-medium mb-3">Test Activation</h4>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Activation Method</Label>
+                    <Select
+                      value={newTest.activation_method}
+                      onValueChange={(v) =>
+                        setNewTest({
+                          ...newTest,
+                          activation_method: v as ActivationMethod,
+                          start_datetime:
+                            v === ActivationMethod.MANUAL
+                              ? ""
+                              : newTest.start_datetime,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ActivationMethod.MANUAL}>
+                          Manual - Available as soon as published
+                        </SelectItem>
+                        <SelectItem value={ActivationMethod.SCHEDULED}>
+                          Scheduled - Set a time period
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {newTest.activation_method === ActivationMethod.MANUAL
+                        ? "Students can attend the test as soon as it is published. Optionally set an end date."
+                        : "Students can only attend the test within the scheduled time period."}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {newTest.activation_method ===
+                      ActivationMethod.SCHEDULED && (
+                      <div>
+                        <Label>Start Date & Time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={newTest.start_datetime}
+                          onChange={(e) =>
+                            setNewTest({
+                              ...newTest,
+                              start_datetime: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <Label>End Date & Time</Label>
+                      <Input
+                        type="datetime-local"
+                        value={newTest.end_datetime}
+                        onChange={(e) =>
+                          setNewTest({
+                            ...newTest,
+                            end_datetime: e.target.value,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {newTest.activation_method === ActivationMethod.MANUAL
+                          ? "Optional. Students won't be able to start after this time."
+                          : "Required. Test will close at this time."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="col-span-2">
                 <Label>Instructions</Label>
@@ -854,12 +976,26 @@ function TestCard({
   onDelete,
   getStatusBadge,
   isMains = false,
+  userRole = "student",
 }: {
   test: TestListItem;
   onDelete: () => void;
   getStatusBadge: (status: TestStatus) => React.ReactNode;
   isMains?: boolean;
+  userRole?: string;
 }) {
+  const isStudent = userRole === "student";
+  const isPublished = test.status === TestStatus.PUBLISHED;
+
+  // Check if test is expired or not yet started
+  const now = new Date();
+  const isExpired = test.end_datetime ? new Date(test.end_datetime) < now : false;
+  const isNotStartedYet =
+    test.activation_method === "SCHEDULED" && test.start_datetime
+      ? new Date(test.start_datetime) > now
+      : false;
+  const isAvailable = isPublished && !isExpired && !isNotStartedYet;
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow bg-white/80 backdrop-blur">
       <CardHeader className="pb-3">
@@ -905,33 +1041,73 @@ function TestCard({
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground text-xs">
-                  {new Date(test.start_datetime).toLocaleDateString()}
+                  Starts: {new Date(test.start_datetime).toLocaleString()}
+                </span>
+              </div>
+            )}
+            {test.end_datetime && (
+              <div className="flex items-center gap-2 col-span-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span
+                  className={`text-xs ${isExpired ? "text-red-600 font-medium" : "text-muted-foreground"}`}
+                >
+                  {isExpired
+                    ? "Expired"
+                    : `Ends: ${new Date(test.end_datetime).toLocaleString()}`}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t">
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`/dashboard/tests/${test.id}`}>
-                <Eye className="h-4 w-4 mr-1" />
-                View
-              </a>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`/dashboard/tests/${test.id}/edit`}>
-                <Edit className="h-4 w-4 mr-1" />
-                Edit
-              </a>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDelete}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          <div className="pt-4 space-y-2">
+            {isStudent ? (
+              // Student view: Take Test button
+              isAvailable ? (
+                <Button
+                  asChild
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                >
+                  <Link href={`/dashboard/tests/${test.id}/take`}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Take Test
+                  </Link>
+                </Button>
+              ) : isExpired ? (
+                <Button variant="ghost" className="w-full text-red-600" disabled>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Test Expired
+                </Button>
+              ) : isNotStartedYet ? (
+                <Button variant="ghost" className="w-full text-amber-600" disabled>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Not Started Yet
+                </Button>
+              ) : (
+                <Button variant="ghost" className="w-full" disabled>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Not Available
+                </Button>
+              )
+            ) : (
+              // Admin/Faculty view: View Test button and Delete icon
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 bg-gradient-to-r from-blue-100 to-purple-100"
+                  asChild
+                >
+                  <Link href={`/dashboard/tests/${test.id}`}>View Test</Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onDelete}
+                  className="h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

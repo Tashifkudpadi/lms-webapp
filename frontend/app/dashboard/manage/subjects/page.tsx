@@ -1,6 +1,7 @@
 // SubjectsPage.tsx
 "use client";
 
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -46,6 +47,7 @@ interface Subject {
 
 export default function SubjectsPage() {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const { subjects, error } = useAppSelector((state) => state.subjectsReducer);
   const { faculty } = useAppSelector((state) => state.facultyReducer);
 
@@ -101,8 +103,9 @@ export default function SubjectsPage() {
     setIsEditDialogOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this subject?")) {
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({ title: "Delete Subject", description: "Are you sure you want to delete this subject?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       dispatch(deleteSubject(id));
     }
   };

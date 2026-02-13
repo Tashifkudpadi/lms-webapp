@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -40,6 +41,7 @@ import { MoreHorizontal, Search, UserPlus, Download } from "lucide-react";
 
 export default function LearnersPage() {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const { students, error } = useAppSelector((state) => state.studentsReducer);
 
   const [search, setSearch] = useState("");
@@ -83,8 +85,9 @@ export default function LearnersPage() {
     setIsEditDialogOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this student?")) {
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({ title: "Delete Student", description: "Are you sure you want to delete this student?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       dispatch(deleteStudent(id));
     }
   };

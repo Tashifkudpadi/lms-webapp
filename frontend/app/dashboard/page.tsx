@@ -195,7 +195,7 @@ function CourseCard({ course }: { course: any }) {
       {/* Thumbnail */}
       <div className="relative h-48 w-full overflow-hidden">
         <Image
-          src={course.thumbnail || "/placeholder.svg"}
+          src={course.course_img || "/placeholder.svg"}
           alt={course.title || "Course Thumbnail"}
           fill
           className="object-cover"

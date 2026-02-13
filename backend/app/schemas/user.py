@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 from app.models.user import Role
 
 
@@ -15,6 +16,9 @@ class UserCreate(UserBase):
 
 
 class UserLogin(UserBase):
+    id: int
+    student_id: Optional[int] = None
+    faculty_id: Optional[int] = None
     access_token: str
     token_type: str
 

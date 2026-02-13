@@ -23,6 +23,11 @@ class TestStatusEnum(str, enum.Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class ActivationMethodEnum(str, enum.Enum):
+    MANUAL = "MANUAL"
+    SCHEDULED = "SCHEDULED"
+
+
 class AttemptStatusEnum(str, enum.Enum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
@@ -94,6 +99,10 @@ class Test(Base):
     total_marks = Column(Float, default=0)
     passing_marks = Column(Float, nullable=True)
     negative_marking = Column(Float, default=0)  # Negative marks per wrong answer
+
+    # Activation
+    activation_method = Column(SQLEnum(ActivationMethodEnum), default=ActivationMethodEnum.MANUAL)
+    shuffle_questions = Column(Boolean, default=False)
 
     # Schedule
     start_datetime = Column(DateTime(timezone=True), nullable=True)

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
   Clock,
@@ -55,7 +57,7 @@ import {
   Timer,
   Award,
   BarChart3,
-  FileCheck,
+  Shuffle,
 } from "lucide-react";
 import { RootState, AppDispatch } from "@/store";
 import {
@@ -71,6 +73,7 @@ import {
   ExamType,
   TestCategory,
   TestStatus,
+  ActivationMethod,
   TestQuestion,
   TestAttempt,
   AttemptStatus,
@@ -83,6 +86,7 @@ import { fetchFaculties } from "@/store/faculties";
 import { uploadToMinio } from "@/utils/uploadToMinio";
 
 export default function TestDetailPage() {
+  const confirm = useConfirm();
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -110,6 +114,8 @@ export default function TestDetailPage() {
   );
 
   const [activeTab, setActiveTab] = useState("settings");
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const shuffleToggledRef = useRef(false);
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showUploadPdf, setShowUploadPdf] = useState(false);
@@ -138,10 +144,13 @@ export default function TestDetailPage() {
     exam_type: ExamType.UPSC,
     category: TestCategory.PRELIMS,
     sub_category_id: null as number | null,
+    activation_method: ActivationMethod.MANUAL,
     duration_minutes: 0,
     total_marks: 0,
     passing_marks: 0,
     negative_marking: 0,
+    start_datetime: "",
+    end_datetime: "",
     instructions: "",
     status: TestStatus.DRAFT,
     course_ids: [] as number[],
@@ -177,16 +186,28 @@ export default function TestDetailPage() {
   // Initialize edit form when test loads
   useEffect(() => {
     if (test) {
+      // Format datetime for datetime-local input (YYYY-MM-DDTHH:mm)
+      const formatDateTimeLocal = (dt?: string) => {
+        if (!dt) return "";
+        const d = new Date(dt);
+        const pad = (n: number) => n.toString().padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
       setEditForm({
         test_name: test.test_name,
         description: test.description || "",
         exam_type: test.exam_type as ExamType,
         category: test.category as TestCategory,
         sub_category_id: test.sub_category_id || null,
+        activation_method:
+          (test.activation_method as ActivationMethod) ||
+          ActivationMethod.MANUAL,
         duration_minutes: test.duration_minutes || 0,
         total_marks: test.total_marks,
         passing_marks: test.passing_marks || 0,
         negative_marking: test.negative_marking,
+        start_datetime: formatDateTimeLocal(test.start_datetime),
+        end_datetime: formatDateTimeLocal(test.end_datetime),
         instructions: test.instructions || "",
         status: test.status,
         course_ids: test.course_ids || [],
@@ -199,6 +220,11 @@ export default function TestDetailPage() {
         pass_mark_value: test.passing_marks || 0,
         pass_mark_unit: "percentage",
       });
+      // Sync shuffle state (skip if user just toggled it)
+      if (!shuffleToggledRef.current) {
+        setShuffleEnabled(test.shuffle_questions || false);
+      }
+      shuffleToggledRef.current = false;
       // Set next question number
       setNewQuestion((prev) => ({
         ...prev,
@@ -237,7 +263,8 @@ export default function TestDetailPage() {
   };
 
   const handleDeleteQuestion = async (questionId: number) => {
-    if (window.confirm("Are you sure you want to delete this question?")) {
+    const ok = await confirm({ title: "Delete Question", description: "Are you sure you want to delete this question?", confirmLabel: "Delete", variant: "destructive" });
+    if (ok) {
       try {
         await dispatch(deleteQuestion({ testId, questionId })).unwrap();
         dispatch(fetchTestById(testId));
@@ -286,10 +313,15 @@ export default function TestDetailPage() {
 
   const handleSaveEdit = async () => {
     try {
+      const payload: any = {
+        ...editForm,
+        start_datetime: editForm.start_datetime || undefined,
+        end_datetime: editForm.end_datetime || undefined,
+      };
       await dispatch(
         updateTest({
           id: testId,
-          data: editForm,
+          data: payload,
         }),
       ).unwrap();
       setEditMode(false);
@@ -299,7 +331,8 @@ export default function TestDetailPage() {
   };
 
   const handlePublish = async () => {
-    if (window.confirm("Are you sure you want to publish this test?")) {
+    const ok = await confirm({ title: "Publish Test", description: "Are you sure you want to publish this test? Students will be able to see and take it.", confirmLabel: "Publish" });
+    if (ok) {
       try {
         await dispatch(
           updateTest({
@@ -314,7 +347,8 @@ export default function TestDetailPage() {
   };
 
   const handleArchive = async () => {
-    if (window.confirm("Are you sure you want to archive this test?")) {
+    const ok = await confirm({ title: "Archive Test", description: "Are you sure you want to archive this test?", confirmLabel: "Archive", variant: "destructive" });
+    if (ok) {
       try {
         await dispatch(
           updateTest({
@@ -397,15 +431,6 @@ export default function TestDetailPage() {
         </div>
 
         <div className="flex gap-2">
-          {test.status === TestStatus.PUBLISHED && (
-            <Button
-              onClick={() => router.push(`/dashboard/tests/${testId}/take`)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600"
-            >
-              <Play className="w-4 h-4 mr-2" />
-              Take Test
-            </Button>
-          )}
           {test.status === TestStatus.DRAFT && (
             <Button
               onClick={handlePublish}
@@ -426,34 +451,48 @@ export default function TestDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-white shadow-sm flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="settings">
+        <TabsList className="flex-wrap h-auto gap-1 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200">
+          <TabsTrigger
+            value="settings"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </TabsTrigger>
-          <TabsTrigger value="instructions">
+          <TabsTrigger
+            value="instructions"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <ClipboardList className="w-4 h-4 mr-2" />
             Test Instruction
           </TabsTrigger>
-          <TabsTrigger value="questions">
+          <TabsTrigger
+            value="questions"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <BookOpen className="w-4 h-4 mr-2" />
             Question Manager
           </TabsTrigger>
-          <TabsTrigger value="time">
+          <TabsTrigger
+            value="time"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <Timer className="w-4 h-4 mr-2" />
             Time Settings
           </TabsTrigger>
-          <TabsTrigger value="grading">
+          <TabsTrigger
+            value="grading"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <Award className="w-4 h-4 mr-2" />
             Grading & Summary
           </TabsTrigger>
-          <TabsTrigger value="result">
+          <TabsTrigger
+            value="result"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
             <BarChart3 className="w-4 h-4 mr-2" />
             Result
-          </TabsTrigger>
-          <TabsTrigger value="review">
-            <FileCheck className="w-4 h-4 mr-2" />
-            Review
           </TabsTrigger>
         </TabsList>
 
@@ -836,86 +875,6 @@ export default function TestDetailPage() {
                     </div>
                   </div>
 
-                  {/* Time Settings */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4">Time Settings</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Duration (minutes)</Label>
-                        <Input
-                          type="number"
-                          value={editForm.duration_minutes}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              duration_minutes: parseInt(e.target.value) || 0,
-                            })
-                          }
-                          placeholder="Enter duration"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Set to 0 for no time limit
-                        </p>
-                      </div>
-                      <div>
-                        <Label>Total Marks</Label>
-                        <Input
-                          type="number"
-                          value={editForm.total_marks}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              total_marks: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                      {editForm.category === TestCategory.PRELIMS && (
-                        <div>
-                          <Label>Negative Marking (per wrong answer)</Label>
-                          <Input
-                            type="number"
-                            step="0.25"
-                            value={editForm.negative_marking}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                negative_marking:
-                                  parseFloat(e.target.value) || 0,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <Label>Status</Label>
-                        <Select
-                          value={editForm.status}
-                          onValueChange={(v) =>
-                            setEditForm({
-                              ...editForm,
-                              status: v as TestStatus,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={TestStatus.DRAFT}>
-                              Draft
-                            </SelectItem>
-                            <SelectItem value={TestStatus.PUBLISHED}>
-                              Published
-                            </SelectItem>
-                            <SelectItem value={TestStatus.ARCHIVED}>
-                              Archived
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -1079,35 +1038,6 @@ export default function TestDetailPage() {
                     </div>
                   </div>
 
-                  {/* Time Settings */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4 text-muted-foreground">
-                      Time Settings
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">
-                          Duration
-                        </p>
-                        <p className="text-lg font-medium flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          {test.duration_minutes
-                            ? `${test.duration_minutes} min`
-                            : "No limit"}
-                        </p>
-                      </div>
-                      {isPrelims && (
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">
-                            Negative Marking
-                          </p>
-                          <p className="text-lg font-medium">
-                            {test.negative_marking}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Description */}
                   {test.description && (
@@ -1194,26 +1124,50 @@ export default function TestDetailPage() {
                     : "Upload question paper PDF for this test"}
                 </CardDescription>
               </div>
-              {isPrelims ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowImportDialog(true)}
-                  >
+              <div className="flex items-center gap-4">
+                {isPrelims && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="shuffle-questions"
+                      checked={shuffleEnabled}
+                      onCheckedChange={(checked) => {
+                        shuffleToggledRef.current = true;
+                        setShuffleEnabled(checked);
+                        dispatch(
+                          updateTest({
+                            id: testId,
+                            data: { shuffle_questions: checked },
+                          }),
+                        );
+                      }}
+                    />
+                    <Label htmlFor="shuffle-questions" className="flex items-center gap-1 cursor-pointer text-sm">
+                      <Shuffle className="w-4 h-4" />
+                      Shuffle Questions
+                    </Label>
+                  </div>
+                )}
+                {isPrelims ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowImportDialog(true)}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import
+                    </Button>
+                    <Button onClick={() => setShowAddQuestion(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Question
+                    </Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => setShowUploadPdf(true)}>
                     <Upload className="w-4 h-4 mr-2" />
-                    Import
+                    Upload PDF
                   </Button>
-                  <Button onClick={() => setShowAddQuestion(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Question
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={() => setShowUploadPdf(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload PDF
-                </Button>
-              )}
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {isPrelims ? (
@@ -1301,57 +1255,279 @@ export default function TestDetailPage() {
             </CardHeader>
             <CardContent>
               {editMode ? (
-                <div className="grid grid-cols-2 gap-4 max-w-xl">
+                <div className="space-y-6">
+                  {/* Test Activation */}
                   <div>
-                    <Label>Duration (minutes)</Label>
-                    <Input
-                      type="number"
-                      value={editForm.duration_minutes}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          duration_minutes: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="Enter duration in minutes"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Set to 0 for no time limit
-                    </p>
+                    <h4 className="font-medium mb-4">Test Activation</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Activation Method</Label>
+                        <Select
+                          value={editForm.activation_method}
+                          onValueChange={(v) =>
+                            setEditForm({
+                              ...editForm,
+                              activation_method: v as ActivationMethod,
+                              start_datetime:
+                                v === ActivationMethod.MANUAL
+                                  ? ""
+                                  : editForm.start_datetime,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={ActivationMethod.MANUAL}>
+                              Manual - Available as soon as published
+                            </SelectItem>
+                            <SelectItem value={ActivationMethod.SCHEDULED}>
+                              Scheduled - Set a time period
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {editForm.activation_method ===
+                          ActivationMethod.MANUAL
+                            ? "Students can attend the test as soon as it is published. Optionally set an end date."
+                            : "Students can only attend the test within the scheduled time period."}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {editForm.activation_method ===
+                          ActivationMethod.SCHEDULED && (
+                          <div>
+                            <Label>Start Date & Time</Label>
+                            <Input
+                              type="datetime-local"
+                              value={editForm.start_datetime}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  start_datetime: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <Label>End Date & Time</Label>
+                          <Input
+                            type="datetime-local"
+                            value={editForm.end_datetime}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                end_datetime: e.target.value,
+                              })
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {editForm.activation_method ===
+                            ActivationMethod.MANUAL
+                              ? "Optional. Students won't be able to start after this time."
+                              : "Required. Test will close at this time."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Duration & Marks */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-4">Duration & Marks</h4>
+                    <div className="grid grid-cols-2 gap-4 max-w-xl">
+                      <div>
+                        <Label>Duration (minutes)</Label>
+                        <Input
+                          type="number"
+                          value={editForm.duration_minutes}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              duration_minutes:
+                                parseInt(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Enter duration in minutes"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Set to 0 for no time limit
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Total Marks</Label>
+                        <Input
+                          type="number"
+                          value={editForm.total_marks}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              total_marks:
+                                parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      {editForm.category === TestCategory.PRELIMS && (
+                        <div>
+                          <Label>Negative Marking (per wrong answer)</Label>
+                          <Input
+                            type="number"
+                            step="0.25"
+                            value={editForm.negative_marking}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                negative_marking:
+                                  parseFloat(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <Label>Status</Label>
+                        <Select
+                          value={editForm.status}
+                          onValueChange={(v) =>
+                            setEditForm({
+                              ...editForm,
+                              status: v as TestStatus,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={TestStatus.DRAFT}>
+                              Draft
+                            </SelectItem>
+                            <SelectItem value={TestStatus.PUBLISHED}>
+                              Published
+                            </SelectItem>
+                            <SelectItem value={TestStatus.ARCHIVED}>
+                              Archived
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      Test Duration
-                    </p>
-                    <p className="text-lg font-medium flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {test.duration_minutes
-                        ? `${test.duration_minutes} minutes`
-                        : "No time limit"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      Total Questions
-                    </p>
-                    <p className="text-lg font-medium">{test.question_count}</p>
-                  </div>
-                  {test.duration_minutes && test.question_count > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        Time per Question
-                      </p>
-                      <p className="text-lg font-medium">
-                        {(test.duration_minutes / test.question_count).toFixed(
-                          1,
-                        )}{" "}
-                        min
-                      </p>
+                <div className="space-y-6">
+                  {/* Test Activation */}
+                  <div>
+                    <h4 className="font-medium mb-4 text-muted-foreground">
+                      Test Activation
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Activation Method
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className={
+                            test.activation_method === "SCHEDULED"
+                              ? "bg-amber-50 border-amber-200 text-amber-700"
+                              : "bg-blue-50 border-blue-200 text-blue-700"
+                          }
+                        >
+                          {test.activation_method === "SCHEDULED"
+                            ? "Scheduled"
+                            : "Manual"}
+                        </Badge>
+                      </div>
+                      {test.activation_method === "SCHEDULED" &&
+                        test.start_datetime && (
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">
+                              Start Date & Time
+                            </p>
+                            <p className="text-sm font-medium flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(
+                                test.start_datetime,
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      {test.end_datetime && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            End Date & Time
+                          </p>
+                          <p
+                            className={`text-sm font-medium flex items-center gap-2 ${
+                              new Date(test.end_datetime) < new Date()
+                                ? "text-red-600"
+                                : ""
+                            }`}
+                          >
+                            <Calendar className="w-4 h-4" />
+                            {new Date(test.end_datetime).toLocaleString()}
+                            {new Date(test.end_datetime) < new Date() &&
+                              " (Expired)"}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Duration & Stats */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-4 text-muted-foreground">
+                      Duration & Marks
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Test Duration
+                        </p>
+                        <p className="text-lg font-medium flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          {test.duration_minutes
+                            ? `${test.duration_minutes} minutes`
+                            : "No time limit"}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Total Questions
+                        </p>
+                        <p className="text-lg font-medium">
+                          {test.question_count}
+                        </p>
+                      </div>
+                      {test.duration_minutes && test.question_count > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            Time per Question
+                          </p>
+                          <p className="text-lg font-medium">
+                            {(
+                              test.duration_minutes / test.question_count
+                            ).toFixed(1)}{" "}
+                            min
+                          </p>
+                        </div>
+                      )}
+                      {isPrelims && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            Negative Marking
+                          </p>
+                          <p className="text-lg font-medium">
+                            {test.negative_marking}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1570,99 +1746,6 @@ export default function TestDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* Review Tab */}
-        <TabsContent value="review" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Review Submissions</CardTitle>
-              <CardDescription>
-                Review and evaluate student submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {attempts.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">Student ID</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-left py-3 px-4">Started</th>
-                        <th className="text-left py-3 px-4">Submitted</th>
-                        {isPrelims && (
-                          <th className="text-left py-3 px-4">Score</th>
-                        )}
-                        {isMains && (
-                          <th className="text-left py-3 px-4">Answer File</th>
-                        )}
-                        <th className="text-left py-3 px-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attempts.map((attempt) => (
-                        <tr
-                          key={attempt.id}
-                          className="border-b hover:bg-slate-50"
-                        >
-                          <td className="py-3 px-4">{attempt.student_id}</td>
-                          <td className="py-3 px-4">
-                            {getAttemptStatusBadge(attempt.status)}
-                          </td>
-                          <td className="py-3 px-4">
-                            {attempt.started_at
-                              ? new Date(attempt.started_at).toLocaleString()
-                              : "-"}
-                          </td>
-                          <td className="py-3 px-4">
-                            {attempt.submitted_at
-                              ? new Date(attempt.submitted_at).toLocaleString()
-                              : "-"}
-                          </td>
-                          {isPrelims && (
-                            <td className="py-3 px-4">
-                              {attempt.score !== null &&
-                              attempt.score !== undefined
-                                ? `${attempt.score}/${test.total_marks}`
-                                : "-"}
-                            </td>
-                          )}
-                          {isMains && (
-                            <td className="py-3 px-4">
-                              {attempt.answer_file_url ? (
-                                <Button variant="ghost" size="sm" asChild>
-                                  <a
-                                    href={attempt.answer_file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </a>
-                                </Button>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                          )}
-                          <td className="py-3 px-4">
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-2" />
-                              Review
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No submissions to review yet.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Add Question Dialog */}

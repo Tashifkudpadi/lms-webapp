@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -42,6 +43,7 @@ export default function AttemptReviewPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+  const { toast } = useToast();
   const testId = Number(params.id);
   const attemptId = Number(params.attemptId);
 
@@ -72,10 +74,10 @@ export default function AttemptReviewPage() {
       );
       // Refresh attempt review
       dispatch(fetchAttemptReview({ testId, attemptId }));
-      alert("Evaluation submitted successfully!");
+      toast({ title: "Success", description: "Evaluation submitted successfully!" });
     } catch (error: any) {
       console.error("Failed to evaluate:", error);
-      alert(error.response?.data?.detail || "Failed to submit evaluation");
+      toast({ title: "Evaluation failed", description: error.response?.data?.detail || "Failed to submit evaluation", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }

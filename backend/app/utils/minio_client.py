@@ -1,4 +1,5 @@
 # app/utils/minio_client.py
+import json
 import hashlib
 import hmac
 from datetime import datetime, timedelta
@@ -18,13 +19,28 @@ minio_client = Minio(
 
 BUCKET_NAME = settings.MINIO_BUCKET
 
-# Create bucket if it doesn't exist
+# Create bucket if it doesn't exist and set public read policy
 try:
     if not minio_client.bucket_exists(BUCKET_NAME):
         minio_client.make_bucket(BUCKET_NAME)
         print(f"Created MinIO bucket: {BUCKET_NAME}")
     else:
         print(f"MinIO bucket '{BUCKET_NAME}' already exists")
+
+    # Set bucket policy to allow public read (GET) access
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"],
+            }
+        ],
+    }
+    minio_client.set_bucket_policy(BUCKET_NAME, json.dumps(policy))
+    print(f"Set public read policy on bucket: {BUCKET_NAME}")
 except Exception as e:
     print(f"MinIO init error: {e}")
 
