@@ -16,8 +16,10 @@ from app.models.student import Student
 from app.models.faculty import Faculty
 from app.models.batch import Batch
 from app.models.course import Course
+from app.models.subject import Subject
+from app.models.topic import Topic
 from app.models.user import User, Role
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, require_role
 from app.schemas.test import (
     TestCreate, TestUpdate, TestOut, TestListOut, TestPreview,
     TestSubCategoryCreate, TestSubCategoryUpdate, TestSubCategoryOut,
@@ -40,6 +42,7 @@ def build_test_out(test: Test) -> TestOut:
         exam_type=ExamType(test.exam_type.value),
         category=TestCategory(test.category.value),
         sub_category_id=test.sub_category_id,
+        subject_id=test.subject_id,
         sub_category_name=test.sub_category.name if test.sub_category else None,
         activation_method=ActivationMethod(test.activation_method.value) if test.activation_method else ActivationMethod.MANUAL,
         shuffle_questions=test.shuffle_questions or False,
@@ -65,16 +68,27 @@ def build_test_out(test: Test) -> TestOut:
 
 
 def build_test_list_out(test: Test) -> TestListOut:
+    # Resolve subject name
+    subject_name = None
+    if test.subject_id:
+        from sqlalchemy.orm import object_session
+        db = object_session(test)
+        if db:
+            subj = db.query(Subject).filter(Subject.id == test.subject_id).first()
+            subject_name = subj.name if subj else None
     return TestListOut(
         id=test.id,
         test_name=test.test_name,
         exam_type=ExamType(test.exam_type.value),
         category=TestCategory(test.category.value),
         sub_category_name=test.sub_category.name if test.sub_category else None,
+        subject_id=test.subject_id,
+        subject_name=subject_name,
         activation_method=ActivationMethod(test.activation_method.value) if test.activation_method else ActivationMethod.MANUAL,
         status=TestStatus(test.status.value),
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
+        passing_marks=test.passing_marks or 0,
         question_count=len(test.questions),
         start_datetime=test.start_datetime,
         end_datetime=test.end_datetime,
@@ -91,6 +105,10 @@ def build_question_out(question: TestQuestion) -> TestQuestionOut:
         question_number=question.question_number,
         question_text=question.question_text,
         question_image_url=question.question_image_url,
+        subject_id=question.subject_id,
+        topic_id=question.topic_id,
+        subject_name=question.subject.name if question.subject else None,
+        topic_name=question.topic.name if question.topic else None,
         correct_option=question.correct_option,
         marks=question.marks,
         solution=question.solution,
@@ -109,7 +127,8 @@ def build_question_out(question: TestQuestion) -> TestQuestionOut:
 @router.get("/sub-categories", response_model=List[TestSubCategoryOut])
 def get_sub_categories(
     exam_type: Optional[ExamType] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get all test sub-categories, optionally filtered by exam type"""
     query = db.query(TestSubCategory)
@@ -132,7 +151,7 @@ def get_sub_categories(
 
 
 @router.post("/sub-categories", response_model=TestSubCategoryOut)
-def create_sub_category(data: TestSubCategoryCreate, db: Session = Depends(get_db)):
+def create_sub_category(data: TestSubCategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Create a new test sub-category"""
     sub_cat = TestSubCategory(
         name=data.name,
@@ -159,7 +178,8 @@ def create_sub_category(data: TestSubCategoryCreate, db: Session = Depends(get_d
 def update_sub_category(
     sub_cat_id: int,
     data: TestSubCategoryUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN))
 ):
     """Update a test sub-category"""
     sub_cat = db.query(TestSubCategory).filter(TestSubCategory.id == sub_cat_id).first()
@@ -188,7 +208,7 @@ def update_sub_category(
 
 
 @router.delete("/sub-categories/{sub_cat_id}")
-def delete_sub_category(sub_cat_id: int, db: Session = Depends(get_db)):
+def delete_sub_category(sub_cat_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Delete a test sub-category"""
     sub_cat = db.query(TestSubCategory).filter(TestSubCategory.id == sub_cat_id).first()
     if not sub_cat:
@@ -206,8 +226,11 @@ def delete_sub_category(sub_cat_id: int, db: Session = Depends(get_db)):
 
 
 # ============ Test CRUD Endpoints ============
-@router.get("/", response_model=List[TestListOut])
+@router.get("/")
 def get_tests(
+    skip: int = 0,
+    limit: int = 0,
+    search: str = "",
     exam_type: Optional[ExamType] = None,
     category: Optional[TestCategory] = None,
     sub_category_id: Optional[int] = None,
@@ -215,7 +238,8 @@ def get_tests(
     student_id: Optional[int] = None,
     faculty_id: Optional[int] = None,
     course_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))
 ):
     """
     Get all tests with optional filters
@@ -287,13 +311,28 @@ def get_tests(
 
         tests = filtered_tests
 
-    return [build_test_list_out(t) for t in tests]
+    items = [build_test_list_out(t) for t in tests]
+
+    if search:
+        search_lower = search.lower()
+        items = [t for t in items if search_lower in t.test_name.lower()]
+
+    total = len(items)
+
+    if limit > 0:
+        items = items[skip:skip + limit]
+
+    return {"items": items, "total": total}
 
 
-@router.get("/my-tests", response_model=List[TestListOut])
+@router.get("/my-tests")
 def get_my_tests(
+    skip: int = 0,
+    limit: int = 0,
+    search: str = "",
     exam_type: Optional[ExamType] = None,
     category: Optional[TestCategory] = None,
+    sub_category_id: Optional[int] = None,
     course_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -316,13 +355,24 @@ def get_my_tests(
         query = query.filter(Test.exam_type == ExamTypeEnum(exam_type.value))
     if category:
         query = query.filter(Test.category == TestCategoryEnum(category.value))
+    if sub_category_id:
+        query = query.filter(Test.sub_category_id == sub_category_id)
     if course_id:
         query = query.filter(Test.courses.any(Course.id == course_id))
 
     # Admin sees all tests
     if current_user.role == Role.ADMIN:
         tests = query.order_by(Test.created_at.desc()).all()
-        return [build_test_list_out(t) for t in tests]
+        items = [build_test_list_out(t) for t in tests]
+
+        if search:
+            search_lower = search.lower()
+            items = [t for t in items if search_lower in t.test_name.lower()]
+
+        total = len(items)
+        if limit > 0:
+            items = items[skip:skip + limit]
+        return {"items": items, "total": total}
 
     # For students and faculties, apply visibility rules
     tests = query.order_by(Test.created_at.desc()).all()
@@ -332,7 +382,6 @@ def get_my_tests(
         show_test = False
 
         if current_user.role == Role.STUDENT:
-            # Find student by email (assuming email matches)
             student = db.query(Student).filter(Student.email == current_user.email).first()
             if student:
                 student_batch_ids = [b.id for b in student.batches]
@@ -340,20 +389,15 @@ def get_my_tests(
                 test_course_ids = [c.id for c in test.courses]
                 test_batch_ids = [b.id for b in test.batches]
 
-                # Rule 1: Show if student is in a batch assigned to the test
                 if any(batch_id in test_batch_ids for batch_id in student_batch_ids):
                     show_test = True
-
-                # Rule 2: Show if student is directly assigned to the test
                 elif any(s.id == student.id for s in test.students):
-                    # But only if test is not in a course, or student is enrolled in that course
                     if not test_course_ids:
                         show_test = True
                     elif any(course_id in student_course_ids for course_id in test_course_ids):
                         show_test = True
 
         elif current_user.role == Role.FACULTY:
-            # Find faculty by email (assuming email matches)
             faculty = db.query(Faculty).filter(Faculty.email == current_user.email).first()
             if faculty:
                 faculty_batch_ids = [b.id for b in faculty.batches]
@@ -361,29 +405,54 @@ def get_my_tests(
                 test_course_ids = [c.id for c in test.courses]
                 test_batch_ids = [b.id for b in test.batches]
 
-                # Rule 1: Show if faculty is in a batch assigned to the test
                 if any(batch_id in test_batch_ids for batch_id in faculty_batch_ids):
                     show_test = True
-
-                # Rule 2: Show if faculty is directly assigned to the test
                 elif any(f.id == faculty.id for f in test.faculties):
-                    # But only if test is not in a course, or faculty teaches that course
                     if not test_course_ids:
                         show_test = True
                     elif any(course_id in faculty_course_ids for course_id in test_course_ids):
                         show_test = True
 
         if show_test:
-            # Students can only see PUBLISHED tests
             if current_user.role == Role.STUDENT and test.status != TestStatusEnum.PUBLISHED:
                 continue
             filtered_tests.append(test)
 
-    return [build_test_list_out(t) for t in filtered_tests]
+    items = [build_test_list_out(t) for t in filtered_tests]
+
+    # Enrich with attempt status for students
+    if current_user.role == Role.STUDENT:
+        student = db.query(Student).filter(Student.email == current_user.email).first()
+        if student:
+            test_ids = [item.id for item in items]
+            attempts = db.query(TestAttempt).filter(
+                TestAttempt.student_id == student.id,
+                TestAttempt.test_id.in_(test_ids)
+            ).all()
+            attempt_map = {a.test_id: a for a in attempts}
+            for item in items:
+                attempt = attempt_map.get(item.id)
+                if attempt:
+                    item.has_attempted = True
+                    item.attempt_status = attempt.status.value
+                    item.attempt_id = attempt.id
+                    item.attempt_score = attempt.score
+                    item.attempt_percentage = attempt.percentage
+
+    if search:
+        search_lower = search.lower()
+        items = [t for t in items if search_lower in t.test_name.lower()]
+
+    total = len(items)
+
+    if limit > 0:
+        items = items[skip:skip + limit]
+
+    return {"items": items, "total": total}
 
 
 @router.post("/", response_model=TestOut)
-def create_test(test: TestCreate, db: Session = Depends(get_db)):
+def create_test(test: TestCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Create a new test"""
     db_test = Test(
         test_name=test.test_name,
@@ -391,6 +460,7 @@ def create_test(test: TestCreate, db: Session = Depends(get_db)):
         exam_type=ExamTypeEnum(test.exam_type.value),
         category=TestCategoryEnum(test.category.value),
         sub_category_id=test.sub_category_id,
+        subject_id=test.subject_id,
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
         passing_marks=test.passing_marks,
@@ -420,7 +490,7 @@ def create_test(test: TestCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{test_id}", response_model=TestOut)
-def get_test(test_id: int, db: Session = Depends(get_db)):
+def get_test(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get a specific test by ID"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -429,7 +499,7 @@ def get_test(test_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{test_id}/preview", response_model=TestPreview)
-def get_test_preview(test_id: int, db: Session = Depends(get_db)):
+def get_test_preview(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get test with all questions for preview (admin/faculty only)"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -445,7 +515,7 @@ def get_test_preview(test_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{test_id}", response_model=TestOut)
-def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db)):
+def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Update a test"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -458,7 +528,26 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db))
         test.description = update.description
     if update.sub_category_id is not None:
         test.sub_category_id = update.sub_category_id
+    if update.subject_id is not None:
+        test.subject_id = update.subject_id
     if update.status is not None:
+        # Validate before publishing
+        if update.status.value == "PUBLISHED" and test.status != TestStatusEnum.PUBLISHED:
+            errors = []
+            if test.category == TestCategoryEnum.PRELIMS and len(test.questions) == 0:
+                errors.append("Add at least one question before publishing")
+            if not test.instructions:
+                errors.append("Add test instructions before publishing")
+            if not test.duration_minutes or test.duration_minutes <= 0:
+                errors.append("Set test duration before publishing")
+            if not test.total_marks or test.total_marks <= 0:
+                errors.append("Set total marks before publishing")
+            if test.passing_marks is None or test.passing_marks <= 0:
+                errors.append("Set passing marks before publishing")
+            if not test.courses:
+                errors.append("Assign at least one course before publishing")
+            if errors:
+                raise HTTPException(status_code=400, detail=" | ".join(errors))
         test.status = TestStatusEnum(update.status.value)
     if update.duration_minutes is not None:
         test.duration_minutes = update.duration_minutes
@@ -498,7 +587,7 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db))
 
 
 @router.delete("/{test_id}")
-def delete_test(test_id: int, db: Session = Depends(get_db)):
+def delete_test(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Delete a test"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -509,9 +598,38 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
     return {"message": "Test deleted successfully"}
 
 
+@router.get("/{test_id}/subjects-topics")
+def get_test_subjects_topics(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get subjects and topics available for a test based on its courses"""
+    test = db.query(Test).filter(Test.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+
+    subjects_set = {}
+    for course in test.courses:
+        for subject in course.subjects:
+            if subject.id not in subjects_set:
+                subjects_set[subject.id] = {
+                    "id": subject.id,
+                    "name": subject.name,
+                    "topics": []
+                }
+            # Add topics for this subject from the course
+            for topic in course.topics:
+                if topic.subject_id == subject.id:
+                    existing_ids = [t["id"] for t in subjects_set[subject.id]["topics"]]
+                    if topic.id not in existing_ids:
+                        subjects_set[subject.id]["topics"].append({
+                            "id": topic.id,
+                            "name": topic.name,
+                        })
+
+    return list(subjects_set.values())
+
+
 # ============ Question Management Endpoints ============
 @router.get("/{test_id}/questions", response_model=List[TestQuestionOut])
-def get_test_questions(test_id: int, db: Session = Depends(get_db)):
+def get_test_questions(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all questions for a test"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -521,7 +639,7 @@ def get_test_questions(test_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{test_id}/questions", response_model=TestQuestionOut)
-def add_question(test_id: int, data: TestQuestionCreate, db: Session = Depends(get_db)):
+def add_question(test_id: int, data: TestQuestionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Add a question to a test"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -544,6 +662,8 @@ def add_question(test_id: int, data: TestQuestionCreate, db: Session = Depends(g
         question_number=data.question_number,
         question_text=data.question_text,
         question_image_url=data.question_image_url,
+        subject_id=data.subject_id,
+        topic_id=data.topic_id,
         correct_option=data.correct_option,
         marks=data.marks,
         solution=data.solution,
@@ -576,7 +696,8 @@ def update_question(
     test_id: int,
     question_id: int,
     data: TestQuestionUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN))
 ):
     """Update a question"""
     question = db.query(TestQuestion).filter(
@@ -593,6 +714,10 @@ def update_question(
         question.question_text = data.question_text
     if data.question_image_url is not None:
         question.question_image_url = data.question_image_url
+    if data.subject_id is not None:
+        question.subject_id = data.subject_id
+    if data.topic_id is not None:
+        question.topic_id = data.topic_id
     if data.correct_option is not None:
         question.correct_option = data.correct_option
     if data.marks is not None:
@@ -630,7 +755,7 @@ def update_question(
 
 
 @router.delete("/{test_id}/questions/{question_id}")
-def delete_question(test_id: int, question_id: int, db: Session = Depends(get_db)):
+def delete_question(test_id: int, question_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """Delete a question"""
     question = db.query(TestQuestion).filter(
         TestQuestion.id == question_id,
@@ -656,7 +781,8 @@ def delete_question(test_id: int, question_id: int, db: Session = Depends(get_db
 async def import_questions(
     test_id: int,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN))
 ):
     """Import questions from Excel or JSON file"""
     test = db.query(Test).filter(Test.id == test_id).first()
@@ -740,6 +866,25 @@ async def import_questions(
                 errors.append(f"Row {idx + 1}: Invalid correct_option (must be 1-4)")
                 continue
 
+            # Resolve subject and topic by name
+            q_subject_id = None
+            q_topic_id = None
+            subject_name = str(q_data.get('subject_name', q_data.get('subject', ''))).strip()
+            topic_name = str(q_data.get('topic_name', q_data.get('topic', ''))).strip()
+
+            if subject_name and subject_name != 'nan':
+                subj = db.query(Subject).filter(Subject.name == subject_name).first()
+                if subj:
+                    q_subject_id = subj.id
+                    if topic_name and topic_name != 'nan':
+                        top = db.query(Topic).filter(Topic.name == topic_name, Topic.subject_id == subj.id).first()
+                        if top:
+                            q_topic_id = top.id
+                        else:
+                            errors.append(f"Row {idx + 1}: Topic '{topic_name}' not found under subject '{subject_name}'")
+                else:
+                    errors.append(f"Row {idx + 1}: Subject '{subject_name}' not found")
+
             question = TestQuestion(
                 test_id=test_id,
                 question_number=q_num,
@@ -747,6 +892,8 @@ async def import_questions(
                 correct_option=correct_opt,
                 marks=marks,
                 solution=solution,
+                subject_id=q_subject_id,
+                topic_id=q_topic_id,
             )
             db.add(question)
             db.flush()
@@ -781,7 +928,7 @@ async def import_questions(
 
 # ============ Test Attempt Endpoints ============
 @router.post("/{test_id}/start", response_model=TestAttemptOut)
-def start_test_attempt(test_id: int, student_id: int, db: Session = Depends(get_db)):
+def start_test_attempt(test_id: int, student_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Start a test attempt for a student"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -790,19 +937,13 @@ def start_test_attempt(test_id: int, student_id: int, db: Session = Depends(get_
     if test.status != TestStatusEnum.PUBLISHED:
         raise HTTPException(status_code=400, detail="Test is not published")
 
-    # Check activation window
+    # Check activation window – always enforce start/end if set
     now = datetime.now(timezone.utc)
 
-    if test.activation_method == ActivationMethodEnum.MANUAL:
-        # Manual: check only end_datetime
-        if test.end_datetime and now > test.end_datetime:
-            raise HTTPException(status_code=400, detail="Test has expired. The deadline has passed.")
-    elif test.activation_method == ActivationMethodEnum.SCHEDULED:
-        # Scheduled: check both start and end
-        if test.start_datetime and now < test.start_datetime:
-            raise HTTPException(status_code=400, detail="Test has not started yet. Please come back at the scheduled time.")
-        if test.end_datetime and now > test.end_datetime:
-            raise HTTPException(status_code=400, detail="Test has expired. The deadline has passed.")
+    if test.start_datetime and now < test.start_datetime:
+        raise HTTPException(status_code=400, detail="Test has not started yet. Please come back at the scheduled time.")
+    if test.end_datetime and now > test.end_datetime:
+        raise HTTPException(status_code=400, detail="Test has expired. The deadline has passed.")
 
     # Check if student has access
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -883,7 +1024,8 @@ def submit_test_attempt(
     test_id: int,
     attempt_id: int,
     data: TestAttemptSubmit,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Submit a test attempt"""
     attempt = db.query(TestAttempt).filter(
@@ -994,7 +1136,7 @@ def submit_test_attempt(
 
 
 @router.get("/{test_id}/attempts", response_model=List[TestAttemptOut])
-def get_test_attempts(test_id: int, db: Session = Depends(get_db)):
+def get_test_attempts(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """Get all attempts for a test (admin/faculty)"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -1029,7 +1171,7 @@ def get_test_attempts(test_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{test_id}/students-with-status", response_model=List[StudentWithAttemptStatus])
-def get_students_with_attempt_status(test_id: int, db: Session = Depends(get_db)):
+def get_students_with_attempt_status(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """Get all eligible students for a test with their attempt status"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -1086,7 +1228,7 @@ def get_students_with_attempt_status(test_id: int, db: Session = Depends(get_db)
 
 
 @router.get("/{test_id}/attempts/{attempt_id}/review", response_model=TestAttemptWithAnswers)
-def get_attempt_review(test_id: int, attempt_id: int, db: Session = Depends(get_db)):
+def get_attempt_review(test_id: int, attempt_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get detailed attempt with all answers for review"""
     attempt = db.query(TestAttempt).filter(
         TestAttempt.id == attempt_id,
@@ -1138,7 +1280,8 @@ def evaluate_mains_attempt(
     attempt_id: int,
     data: MainsEvaluationCreate,
     evaluator_id: int,  # In real app, get from auth
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))
 ):
     """Evaluate a mains test attempt"""
     attempt = db.query(TestAttempt).filter(
@@ -1191,7 +1334,7 @@ def evaluate_mains_attempt(
 
 # ============ Statistics Endpoint ============
 @router.get("/{test_id}/statistics", response_model=TestStatistics)
-def get_test_statistics(test_id: int, db: Session = Depends(get_db)):
+def get_test_statistics(test_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """Get statistics for a test"""
     test = db.query(Test).filter(Test.id == test_id).first()
     if not test:
@@ -1233,7 +1376,7 @@ def get_test_statistics(test_id: int, db: Session = Depends(get_db)):
 
 # ============ Student Results Endpoint ============
 @router.get("/student/{student_id}/results", response_model=List[TestResultSummary])
-def get_student_results(student_id: int, db: Session = Depends(get_db)):
+def get_student_results(student_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all test results for a student"""
     attempts = db.query(TestAttempt).filter(
         TestAttempt.student_id == student_id,

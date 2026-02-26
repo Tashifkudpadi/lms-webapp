@@ -76,3 +76,5 @@ class Course(Base):
 
     contents = relationship(
         "CourseContent", back_populates="course", cascade="all, delete")
+    zoom_classes = relationship(
+        "ZoomClass", back_populates="course", cascade="all, delete")

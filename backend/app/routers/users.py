@@ -2,10 +2,12 @@ from typing import List, Optional
 from datetime import timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.user import User, Role
 # from app.models.student import Student
 # from app.models.faculty import Faculty
 from app.database import get_db
+from app.utils.auth import require_role
 from pydantic import BaseModel
 
 router = APIRouter(tags=["users"])
@@ -39,23 +41,43 @@ def format_utc_datetime(dt):
     return dt.isoformat()
 
 
-@router.get("/", response_model=List[UserResponse])
-async def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return [
-        UserResponse(
-            id=user.id,
-            name=f"{user.first_name} {user.last_name}",
-            email=user.email,
-            role=user.role.value,
-            last_active=format_utc_datetime(user.last_active)
+@router.get("/")
+async def get_users(skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
+    query = db.query(User)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            or_(
+                User.first_name.ilike(search_filter),
+                User.last_name.ilike(search_filter),
+                User.email.ilike(search_filter),
+            )
         )
-        for user in users
-    ]
+
+    total = query.count()
+
+    if limit > 0:
+        query = query.offset(skip).limit(limit)
+
+    users = query.all()
+    return {
+        "items": [
+            UserResponse(
+                id=user.id,
+                name=f"{user.first_name} {user.last_name}",
+                email=user.email,
+                role=user.role.value,
+                last_active=format_utc_datetime(user.last_active)
+            )
+            for user in users
+        ],
+        "total": total,
+    }
 
 
 @router.delete("/{user_id}", response_model=dict)
-async def delete_user(user_id: int, db: Session = Depends(get_db)):
+async def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -76,7 +98,7 @@ async def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+async def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(

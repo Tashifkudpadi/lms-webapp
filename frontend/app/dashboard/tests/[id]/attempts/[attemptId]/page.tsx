@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -42,10 +42,13 @@ import axiosInstance from "@/utils/axios";
 export default function AttemptReviewPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
   const testId = Number(params.id);
   const attemptId = Number(params.attemptId);
+  const courseId = searchParams.get("courseId");
+  const backUrl = courseId ? `/dashboard/courses/${courseId}` : `/dashboard/tests/${testId}`;
 
   const { attemptReview, selected: test, questions, loading } = useSelector(
     (state: RootState) => state.testsReducer
@@ -116,11 +119,11 @@ export default function AttemptReviewPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/dashboard/tests/${testId}`)}
+            onClick={() => router.push(backUrl)}
             className="mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Test
+            {courseId ? "Back to Course" : "Back to Test"}
           </Button>
           <h1 className="text-3xl font-bold tracking-tight">
             {attemptReview.test_name}
@@ -256,6 +259,51 @@ export default function AttemptReviewPage() {
                 </div>
               </div>
 
+              {/* Subject-wise Score Breakdown */}
+              {(() => {
+                const subjectScores: Record<string, { total: number; obtained: number; correct: number; wrong: number; unanswered: number; count: number }> = {};
+                questions.forEach((q) => {
+                  const subjectName = q.subject_name || "Uncategorized";
+                  if (!subjectScores[subjectName]) {
+                    subjectScores[subjectName] = { total: 0, obtained: 0, correct: 0, wrong: 0, unanswered: 0, count: 0 };
+                  }
+                  subjectScores[subjectName].total += q.marks;
+                  subjectScores[subjectName].count += 1;
+                  const ans = answersMap.get(q.id);
+                  if (ans && ans.is_correct === true) {
+                    subjectScores[subjectName].correct += 1;
+                    subjectScores[subjectName].obtained += ans.marks_obtained || 0;
+                  } else if (ans && ans.is_correct === false) {
+                    subjectScores[subjectName].wrong += 1;
+                    subjectScores[subjectName].obtained += ans.marks_obtained || 0;
+                  } else {
+                    subjectScores[subjectName].unanswered += 1;
+                  }
+                });
+                const subjectEntries = Object.entries(subjectScores);
+                if (subjectEntries.length <= 1 && subjectEntries[0]?.[0] === "Uncategorized") return null;
+                return (
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Subject-wise Score</h4>
+                    <div className="space-y-2">
+                      {subjectEntries.map(([name, data]) => (
+                        <div key={name} className="flex items-center justify-between p-2 bg-white rounded-md border">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-slate-700">{name}</span>
+                            <span className="text-xs text-muted-foreground">({data.count} Q)</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-green-600 font-medium">{data.correct} correct</span>
+                            <span className="text-red-600 font-medium">{data.wrong} wrong</span>
+                            <span className="font-semibold text-slate-800">{data.obtained}/{data.total}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Questions */}
               <div className="space-y-4">
                 {questions.map((question) => {
@@ -277,11 +325,21 @@ export default function AttemptReviewPage() {
                     >
                       <CardContent className="pt-4">
                         <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
                               {question.question_number}
                             </span>
                             <Badge variant="outline">{question.marks} marks</Badge>
+                            {question.subject_name && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                                {question.subject_name}
+                              </Badge>
+                            )}
+                            {question.topic_name && (
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+                                {question.topic_name}
+                              </Badge>
+                            )}
                           </div>
                           {isCorrect && (
                             <Badge className="bg-green-500">

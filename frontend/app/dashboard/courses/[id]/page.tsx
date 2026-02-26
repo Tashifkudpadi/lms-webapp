@@ -38,6 +38,7 @@ import LearnersTab from "@/app/dashboard/courses/tabs/LearnersTab";
 import BatchesTab from "@/app/dashboard/courses/tabs/BatchesTab";
 import TestsTab from "@/app/dashboard/courses/tabs/TestsTab";
 import AssignmentsTab from "@/app/dashboard/courses/tabs/AssignmentsTab";
+import ClassesTab from "@/app/dashboard/courses/tabs/ClassesTab";
 import SettingsTab from "@/app/dashboard/courses/tabs/SettingsTab";
 
 export default function ViewCoursePage({
@@ -48,6 +49,12 @@ export default function ViewCoursePage({
   const { id } = usePromise(params);
   const dispatch = useAppDispatch();
   const { selected, loading } = useAppSelector((state) => state.coursesReducer);
+  const { user } = useAppSelector((state) => state.authReducer);
+  const isAdmin = user?.role === "admin";
+  const isStudent = user?.role === "student";
+
+  // Dynamic tab grid class: admin=7, faculty=6, student=4
+  const tabGridClass = isAdmin ? "grid-cols-7" : isStudent ? "grid-cols-4" : "grid-cols-6";
 
   useEffect(() => {
     if (id) {
@@ -65,7 +72,8 @@ export default function ViewCoursePage({
       instructor: {
         name: c.instructor_name ?? c.instructor?.name ?? "",
         title: c.instructor_title ?? c.instructor?.title ?? "",
-        avatar: c.instructor_avatar ?? c.instructor?.avatar ?? "/placeholder.svg",
+        avatar:
+          c.instructor_avatar ?? c.instructor?.avatar ?? "/placeholder.svg",
         rating: c.instructor_rating ?? c.instructor?.rating ?? "",
         students: c.instructor_students ?? c.instructor?.students ?? "",
       },
@@ -174,7 +182,7 @@ export default function ViewCoursePage({
 
       <div className="relative z-10">
         {/* Back Button */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 pb-3">
           <Button
             variant="outline"
             size="sm"
@@ -265,25 +273,29 @@ export default function ViewCoursePage({
         {/* Course Content Tabs */}
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-blue-200 shadow-2xl p-6">
           <Tabs defaultValue="contents" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 bg-gradient-to-r from-blue-100 to-purple-100 backdrop-blur-sm border border-blue-200 rounded-xl p-1 shadow-lg">
+            <TabsList className={`grid w-full ${tabGridClass} bg-gradient-to-r from-blue-100 to-purple-100 backdrop-blur-sm border border-blue-200 rounded-xl p-1 shadow-lg`}>
               <TabsTrigger
                 value="contents"
                 className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
               >
                 Contents
               </TabsTrigger>
-              <TabsTrigger
-                value="learners"
-                className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
-              >
-                Learners
-              </TabsTrigger>
-              <TabsTrigger
-                value="batches"
-                className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
-              >
-                Batches
-              </TabsTrigger>
+              {!isStudent && (
+                <TabsTrigger
+                  value="learners"
+                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
+                >
+                  Learners
+                </TabsTrigger>
+              )}
+              {!isStudent && (
+                <TabsTrigger
+                  value="batches"
+                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
+                >
+                  Batches
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="tests"
                 className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
@@ -291,17 +303,25 @@ export default function ViewCoursePage({
                 Tests
               </TabsTrigger>
               <TabsTrigger
+                value="classes"
+                className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
+              >
+                Classes
+              </TabsTrigger>
+              <TabsTrigger
                 value="assignments"
                 className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
               >
                 Assignments
               </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
-              >
-                Settings
-              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger
+                  value="settings"
+                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"
+                >
+                  Settings
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* contents Tab */}
@@ -310,18 +330,27 @@ export default function ViewCoursePage({
             </TabsContent>
 
             {/* learners Tab */}
-            <TabsContent value="learners" className="mt-6">
-              <LearnersTab courseId={id} />
-            </TabsContent>
+            {!isStudent && (
+              <TabsContent value="learners" className="mt-6">
+                <LearnersTab courseId={id} />
+              </TabsContent>
+            )}
 
             {/* batches Tab */}
-            <TabsContent value="batches" className="mt-6">
-              <BatchesTab courseId={id} />
-            </TabsContent>
+            {!isStudent && (
+              <TabsContent value="batches" className="mt-6">
+                <BatchesTab courseId={id} />
+              </TabsContent>
+            )}
 
             {/* tests Tab */}
             <TabsContent value="tests" className="mt-6">
               <TestsTab courseId={id} />
+            </TabsContent>
+
+            {/* classes Tab */}
+            <TabsContent value="classes" className="mt-6">
+              <ClassesTab courseId={id} />
             </TabsContent>
 
             {/* assignments Tab */}
@@ -330,9 +359,11 @@ export default function ViewCoursePage({
             </TabsContent>
 
             {/* settings Tab */}
-            <TabsContent value="settings" className="mt-6">
-              <SettingsTab courseId={id} course={course} selected={selected} />
-            </TabsContent>
+            {isAdmin && (
+              <TabsContent value="settings" className="mt-6">
+                <SettingsTab courseId={id} course={course} selected={selected} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

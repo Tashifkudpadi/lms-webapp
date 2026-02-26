@@ -1,16 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.faculty import Faculty
 from app.models.faculty_subject import FacultySubject
+from app.models.user import User, Role
 from app.database import get_db
 from app.schemas.faculty import FacultyCreate, FacultyUpdate, FacultyOut
+from app.utils.auth import get_current_user, require_role
 from typing import List
 
 router = APIRouter()
 
 
 @router.post("/", response_model=FacultyOut)
-def create_faculty(faculty: FacultyCreate, db: Session = Depends(get_db)):
+def create_faculty(faculty: FacultyCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
+    existing = db.query(Faculty).filter(Faculty.email == faculty.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A faculty with this email already exists")
+
     db_faculty = Faculty(
         name=faculty.name,
         email=faculty.email,
@@ -38,9 +45,25 @@ def create_faculty(faculty: FacultyCreate, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/", response_model=List[FacultyOut])
-def get_faculties(db: Session = Depends(get_db)):
-    faculties = db.query(Faculty).all()
+@router.get("/")
+def get_faculties(skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Faculty)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            or_(
+                Faculty.name.ilike(search_filter),
+                Faculty.email.ilike(search_filter),
+            )
+        )
+
+    total = query.count()
+
+    if limit > 0:
+        query = query.offset(skip).limit(limit)
+
+    faculties = query.all()
     result = []
     for faculty in faculties:
         subject_ids = [assoc.subject_id for assoc in db.query(
@@ -52,11 +75,11 @@ def get_faculties(db: Session = Depends(get_db)):
             mobile_number=faculty.mobile_number,
             subject_ids=subject_ids
         ))
-    return result
+    return {"items": result, "total": total}
 
 
 @router.get("/{faculty_id}", response_model=FacultyOut)
-def get_faculty(faculty_id: int, db: Session = Depends(get_db)):
+def get_faculty(faculty_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     faculty = db.query(Faculty).filter(Faculty.id == faculty_id).first()
     if not faculty:
         raise HTTPException(status_code=404, detail="Faculty not found")
@@ -74,10 +97,15 @@ def get_faculty(faculty_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{faculty_id}", response_model=FacultyOut)
-def update_faculty(faculty_id: int, update: FacultyUpdate, db: Session = Depends(get_db)):
+def update_faculty(faculty_id: int, update: FacultyUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     faculty = db.query(Faculty).filter(Faculty.id == faculty_id).first()
     if not faculty:
         raise HTTPException(status_code=404, detail="Faculty not found")
+
+    if update.email != faculty.email:
+        existing = db.query(Faculty).filter(Faculty.email == update.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="A faculty with this email already exists")
 
     faculty.name = update.name
     faculty.email = update.email
@@ -107,7 +135,7 @@ def update_faculty(faculty_id: int, update: FacultyUpdate, db: Session = Depends
 
 
 @router.delete("/{faculty_id}")
-def delete_faculty(faculty_id: int, db: Session = Depends(get_db)):
+def delete_faculty(faculty_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     faculty = db.query(Faculty).filter(Faculty.id == faculty_id).first()
     if not faculty:
         raise HTTPException(status_code=404, detail="Faculty not found")

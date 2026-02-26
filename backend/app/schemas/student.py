@@ -8,7 +8,7 @@ class StudentBase(BaseModel):
     email: EmailStr
     roll_number: str  # <-- Make sure this is str, NOT EmailStr
     mobile_number: str
-    enrollment_date: date
+    enrollment_date: Optional[date] = None
 
 
 class StudentCreate(StudentBase):
@@ -25,7 +25,7 @@ class StudentOut(BaseModel):
     email: EmailStr
     roll_number: str
     mobile_number: str
-    enrollment_date: date
+    enrollment_date: Optional[date] = None
 
     class Config:
         orm_mode = True

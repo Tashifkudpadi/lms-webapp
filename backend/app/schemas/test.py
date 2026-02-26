@@ -83,6 +83,8 @@ class TestQuestionBase(BaseModel):
     question_number: int
     question_text: str
     question_image_url: Optional[str] = None
+    subject_id: Optional[int] = None
+    topic_id: Optional[int] = None
     correct_option: int = Field(..., ge=1, le=4)
     marks: float = 1.0
     solution: Optional[str] = None
@@ -97,6 +99,8 @@ class TestQuestionUpdate(BaseModel):
     question_number: Optional[int] = None
     question_text: Optional[str] = None
     question_image_url: Optional[str] = None
+    subject_id: Optional[int] = None
+    topic_id: Optional[int] = None
     correct_option: Optional[int] = Field(None, ge=1, le=4)
     marks: Optional[float] = None
     solution: Optional[str] = None
@@ -107,6 +111,8 @@ class TestQuestionUpdate(BaseModel):
 class TestQuestionOut(TestQuestionBase):
     id: int
     test_id: int
+    subject_name: Optional[str] = None
+    topic_name: Optional[str] = None
     options: List[TestQuestionOptionOut] = []
     created_at: datetime
 
@@ -126,6 +132,7 @@ class TestBase(BaseModel):
     exam_type: ExamType
     category: TestCategory
     sub_category_id: Optional[int] = None
+    subject_id: Optional[int] = None
     activation_method: ActivationMethod = ActivationMethod.MANUAL
     shuffle_questions: bool = False
     duration_minutes: Optional[int] = None
@@ -151,6 +158,7 @@ class TestUpdate(BaseModel):
     test_name: Optional[str] = None
     description: Optional[str] = None
     sub_category_id: Optional[int] = None
+    subject_id: Optional[int] = None
     activation_method: Optional[ActivationMethod] = None
     shuffle_questions: Optional[bool] = None
     status: Optional[TestStatus] = None
@@ -195,16 +203,24 @@ class TestListOut(BaseModel):
     exam_type: ExamType
     category: TestCategory
     sub_category_name: Optional[str] = None
+    subject_id: Optional[int] = None
+    subject_name: Optional[str] = None
     activation_method: ActivationMethod = ActivationMethod.MANUAL
     status: TestStatus
     duration_minutes: Optional[int] = None
     total_marks: float
+    passing_marks: float = 0
     question_count: int = 0
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None
     created_at: datetime
     course_ids: List[int] = []
     batch_ids: List[int] = []
+    has_attempted: bool = False
+    attempt_status: Optional[str] = None
+    attempt_id: Optional[int] = None
+    attempt_score: Optional[float] = None
+    attempt_percentage: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -330,6 +346,8 @@ class QuestionImportItem(BaseModel):
     correct_option: int = Field(..., ge=1, le=4)
     marks: float = 1.0
     solution: Optional[str] = None
+    subject_name: Optional[str] = None
+    topic_name: Optional[str] = None
 
 
 class QuestionImportResult(BaseModel):

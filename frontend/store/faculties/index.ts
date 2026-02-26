@@ -38,7 +38,7 @@ export const fetchFaculties = createAsyncThunk(
   async (_, { dispatch }) => {
     try {
       const response = await axiosInstance.get("/faculties");
-      dispatch(setFaculty(response.data));
+      dispatch(setFaculty(response.data.items));
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.detail || "Failed to fetch faculty";

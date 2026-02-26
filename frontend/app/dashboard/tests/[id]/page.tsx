@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -66,6 +67,7 @@ import {
   fetchTestAttempts,
   fetchStudentsWithAttemptStatus,
   fetchSubCategories,
+  fetchTestSubjectsTopics,
   addQuestion,
   deleteQuestion,
   importQuestions,
@@ -78,6 +80,7 @@ import {
   TestAttempt,
   AttemptStatus,
   StudentWithAttemptStatus,
+  TestSubjectWithTopics,
 } from "@/store/tests";
 import { fetchBatches } from "@/store/batches";
 import { fetchCourses } from "@/store/courses";
@@ -87,10 +90,15 @@ import { uploadToMinio } from "@/utils/uploadToMinio";
 
 export default function TestDetailPage() {
   const confirm = useConfirm();
+  const { toast } = useToast();
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const testId = Number(params.id);
+
+  const { user } = useSelector((state: RootState) => state.authReducer);
+  const userRole = user?.role || "student";
+  const isStudent = userRole === "student";
 
   const {
     selected: test,
@@ -98,6 +106,7 @@ export default function TestDetailPage() {
     attempts,
     studentsWithStatus,
     subCategories,
+    testSubjectsTopics,
     loading,
   } = useSelector((state: RootState) => state.testsReducer);
   const batches = useSelector(
@@ -126,6 +135,8 @@ export default function TestDetailPage() {
   const [newQuestion, setNewQuestion] = useState({
     question_number: 1,
     question_text: "",
+    subject_id: null as number | null,
+    topic_id: null as number | null,
     correct_option: 1,
     marks: 1,
     solution: "",
@@ -173,15 +184,19 @@ export default function TestDetailPage() {
     if (testId) {
       dispatch(fetchTestById(testId));
       dispatch(fetchQuestions(testId));
-      dispatch(fetchTestAttempts(testId));
-      dispatch(fetchStudentsWithAttemptStatus(testId));
-      dispatch(fetchBatches());
-      dispatch(fetchCourses());
-      dispatch(fetchStudents());
-      dispatch(fetchFaculties());
+      dispatch(fetchTestSubjectsTopics(testId));
+      // Admin/faculty-only data
+      if (!isStudent) {
+        dispatch(fetchTestAttempts(testId));
+        dispatch(fetchStudentsWithAttemptStatus(testId));
+        dispatch(fetchBatches());
+        dispatch(fetchCourses());
+        dispatch(fetchStudents());
+        dispatch(fetchFaculties());
+      }
       dispatch(fetchSubCategories());
     }
-  }, [dispatch, testId]);
+  }, [dispatch, testId, isStudent]);
 
   // Initialize edit form when test loads
   useEffect(() => {
@@ -245,6 +260,8 @@ export default function TestDetailPage() {
       setNewQuestion({
         question_number: (test?.question_count || 0) + 2,
         question_text: "",
+        subject_id: null,
+        topic_id: null,
         correct_option: 1,
         marks: 1,
         solution: "",
@@ -263,7 +280,12 @@ export default function TestDetailPage() {
   };
 
   const handleDeleteQuestion = async (questionId: number) => {
-    const ok = await confirm({ title: "Delete Question", description: "Are you sure you want to delete this question?", confirmLabel: "Delete", variant: "destructive" });
+    const ok = await confirm({
+      title: "Delete Question",
+      description: "Are you sure you want to delete this question?",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
     if (ok) {
       try {
         await dispatch(deleteQuestion({ testId, questionId })).unwrap();
@@ -311,12 +333,21 @@ export default function TestDetailPage() {
     }
   };
 
+  // Convert datetime-local value to ISO string with timezone offset
+  const toISOWithTimezone = (dt: string): string | undefined => {
+    if (!dt) return undefined;
+    // datetime-local gives "YYYY-MM-DDTHH:mm" in local time
+    // Create a Date from it (interpreted as local time) and convert to ISO
+    const d = new Date(dt);
+    return d.toISOString();
+  };
+
   const handleSaveEdit = async () => {
     try {
       const payload: any = {
         ...editForm,
-        start_datetime: editForm.start_datetime || undefined,
-        end_datetime: editForm.end_datetime || undefined,
+        start_datetime: toISOWithTimezone(editForm.start_datetime),
+        end_datetime: toISOWithTimezone(editForm.end_datetime),
       };
       await dispatch(
         updateTest({
@@ -331,7 +362,45 @@ export default function TestDetailPage() {
   };
 
   const handlePublish = async () => {
-    const ok = await confirm({ title: "Publish Test", description: "Are you sure you want to publish this test? Students will be able to see and take it.", confirmLabel: "Publish" });
+    if (!test) return;
+    // Frontend validation before publish
+    const errors: string[] = [];
+    if (
+      test.category === TestCategory.PRELIMS &&
+      (!questions || questions.length === 0)
+    ) {
+      errors.push("Add at least one question");
+    }
+    if (!test.instructions) {
+      errors.push("Add test instructions");
+    }
+    if (!test.duration_minutes || test.duration_minutes <= 0) {
+      errors.push("Set test duration");
+    }
+    if (!test.total_marks || test.total_marks <= 0) {
+      errors.push("Set total marks");
+    }
+    if (!test.passing_marks || test.passing_marks <= 0) {
+      errors.push("Set passing marks");
+    }
+    if (!test.course_ids || test.course_ids.length === 0) {
+      errors.push("Assign at least one course");
+    }
+    if (errors.length > 0) {
+      toast({
+        title: "Cannot publish test",
+        description: errors.join(", "),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const ok = await confirm({
+      title: "Publish Test",
+      description:
+        "Are you sure you want to publish this test? Students will be able to see and take it.",
+      confirmLabel: "Publish",
+    });
     if (ok) {
       try {
         await dispatch(
@@ -340,14 +409,27 @@ export default function TestDetailPage() {
             data: { status: TestStatus.PUBLISHED },
           }),
         ).unwrap();
-      } catch (err) {
-        console.error("Failed to publish test:", err);
+      } catch (err: any) {
+        const msg =
+          err?.message ||
+          err?.response?.data?.detail ||
+          "Failed to publish test";
+        toast({
+          title: "Publish failed",
+          description: msg,
+          variant: "destructive",
+        });
       }
     }
   };
 
   const handleArchive = async () => {
-    const ok = await confirm({ title: "Archive Test", description: "Are you sure you want to archive this test?", confirmLabel: "Archive", variant: "destructive" });
+    const ok = await confirm({
+      title: "Archive Test",
+      description: "Are you sure you want to archive this test?",
+      confirmLabel: "Archive",
+      variant: "destructive",
+    });
     if (ok) {
       try {
         await dispatch(
@@ -448,6 +530,89 @@ export default function TestDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Publish Readiness Checklist */}
+      {test.status === TestStatus.DRAFT &&
+        !isStudent &&
+        (() => {
+          const checks = [
+            {
+              label: "Questions added",
+              ok: isPrelims
+                ? questions && questions.length > 0
+                : !!test.question_file_url,
+              tab: "questions",
+            },
+            {
+              label: "Instructions",
+              ok: !!test.instructions,
+              tab: "instructions",
+            },
+            {
+              label: "Duration & timing",
+              ok: !!test.duration_minutes && test.duration_minutes > 0,
+              tab: "time",
+            },
+            {
+              label: "Total marks",
+              ok: !!test.total_marks && test.total_marks > 0,
+              tab: "time",
+            },
+            {
+              label: "Passing marks",
+              ok: !!test.passing_marks && test.passing_marks > 0,
+              tab: "grading",
+            },
+            {
+              label: "Course assigned",
+              ok: !!test.course_ids && test.course_ids.length > 0,
+              tab: "settings",
+            },
+          ];
+          const allDone = checks.every((c) => c.ok);
+          return (
+            <Card
+              className={`border ${allDone ? "border-green-200 bg-green-50/50" : "border-amber-200 bg-amber-50/50"}`}
+            >
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-3 mb-2">
+                  {allDone ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  )}
+                  <span
+                    className={`text-sm font-semibold ${allDone ? "text-green-800" : "text-amber-800"}`}
+                  >
+                    {allDone
+                      ? "Ready to publish!"
+                      : "Complete these items before publishing:"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap  gap-2 ml-8">
+                  {checks.map((c) => (
+                    <button
+                      key={c.label}
+                      onClick={() => setActiveTab(c.tab)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        c.ok
+                          ? "bg-green-100 text-green-700 border border-green-200"
+                          : "bg-white text-amber-700 border border-amber-300 hover:bg-amber-100 cursor-pointer"
+                      }`}
+                    >
+                      {c.ok ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : (
+                        <AlertCircle className="w-3 h-3" />
+                      )}
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -657,9 +822,21 @@ export default function TestDetailPage() {
                         onValueChange={(v) => {
                           const id = parseInt(v);
                           if (!editForm.course_ids.includes(id)) {
+                            const updatedCourseIds = [
+                              ...editForm.course_ids,
+                              id,
+                            ];
                             setEditForm({
                               ...editForm,
-                              course_ids: [...editForm.course_ids, id],
+                              course_ids: updatedCourseIds,
+                              faculty_ids: editForm.faculty_ids.filter((fid) =>
+                                updatedCourseIds.some((cid) => {
+                                  const c = courses.find(
+                                    (course: any) => course.id === cid,
+                                  );
+                                  return c?.faculty_ids?.includes(fid);
+                                }),
+                              ),
                             });
                           }
                         }}
@@ -687,14 +864,25 @@ export default function TestDetailPage() {
                               key={id}
                               variant="secondary"
                               className="cursor-pointer hover:bg-red-100"
-                              onClick={() =>
+                              onClick={() => {
+                                const updatedCourseIds =
+                                  editForm.course_ids.filter(
+                                    (cid) => cid !== id,
+                                  );
                                 setEditForm({
                                   ...editForm,
-                                  course_ids: editForm.course_ids.filter(
-                                    (cid) => cid !== id,
+                                  course_ids: updatedCourseIds,
+                                  faculty_ids: editForm.faculty_ids.filter(
+                                    (fid) =>
+                                      updatedCourseIds.some((cid) => {
+                                        const c = courses.find(
+                                          (course: any) => course.id === cid,
+                                        );
+                                        return c?.faculty_ids?.includes(fid);
+                                      }),
                                   ),
-                                })
-                              }
+                                });
+                              }}
                             >
                               {course?.course_name} ×
                             </Badge>
@@ -819,62 +1007,79 @@ export default function TestDetailPage() {
 
                       <div>
                         <Label>Faculties</Label>
-                        <Select
-                          value=""
-                          onValueChange={(v) => {
-                            const id = parseInt(v);
-                            if (!editForm.faculty_ids.includes(id)) {
-                              setEditForm({
-                                ...editForm,
-                                faculty_ids: [...editForm.faculty_ids, id],
-                              });
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Add faculty" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {faculties
-                              .filter(
-                                (f: any) =>
-                                  !editForm.faculty_ids.includes(f.id),
-                              )
-                              .map((f: any) => (
-                                <SelectItem key={f.id} value={f.id.toString()}>
-                                  {f.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {editForm.faculty_ids.map((id) => {
-                            const faculty = faculties.find(
-                              (f: any) => f.id === id,
-                            );
-                            return (
-                              <Badge
-                                key={id}
-                                variant="secondary"
-                                className="cursor-pointer hover:bg-red-100"
-                                onClick={() =>
+                        {editForm.course_ids.length === 0 ? (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Select a course first to see available faculties
+                          </p>
+                        ) : (
+                          <>
+                            <Select
+                              value=""
+                              onValueChange={(v) => {
+                                const id = parseInt(v);
+                                if (!editForm.faculty_ids.includes(id)) {
                                   setEditForm({
                                     ...editForm,
-                                    faculty_ids: editForm.faculty_ids.filter(
-                                      (fid) => fid !== id,
-                                    ),
-                                  })
+                                    faculty_ids: [...editForm.faculty_ids, id],
+                                  });
                                 }
-                              >
-                                {faculty?.name} ×
-                              </Badge>
-                            );
-                          })}
-                        </div>
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Add faculty" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {faculties
+                                  .filter((f: any) => {
+                                    if (editForm.faculty_ids.includes(f.id))
+                                      return false;
+                                    return editForm.course_ids.some((cid) => {
+                                      const c = courses.find(
+                                        (course: any) => course.id === cid,
+                                      );
+                                      return c?.faculty_ids?.includes(f.id);
+                                    });
+                                  })
+                                  .map((f: any) => (
+                                    <SelectItem
+                                      key={f.id}
+                                      value={f.id.toString()}
+                                    >
+                                      {f.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {editForm.faculty_ids.map((id) => {
+                                const faculty = faculties.find(
+                                  (f: any) => f.id === id,
+                                );
+                                return (
+                                  <Badge
+                                    key={id}
+                                    variant="secondary"
+                                    className="cursor-pointer hover:bg-red-100"
+                                    onClick={() =>
+                                      setEditForm({
+                                        ...editForm,
+                                        faculty_ids:
+                                          editForm.faculty_ids.filter(
+                                            (fid) => fid !== id,
+                                          ),
+                                      })
+                                    }
+                                  >
+                                    {faculty?.name} ×
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -1038,7 +1243,6 @@ export default function TestDetailPage() {
                     </div>
                   </div>
 
-
                   {/* Description */}
                   {test.description && (
                     <div className="border-t pt-4">
@@ -1141,7 +1345,10 @@ export default function TestDetailPage() {
                         );
                       }}
                     />
-                    <Label htmlFor="shuffle-questions" className="flex items-center gap-1 cursor-pointer text-sm">
+                    <Label
+                      htmlFor="shuffle-questions"
+                      className="flex items-center gap-1 cursor-pointer text-sm"
+                    >
                       <Shuffle className="w-4 h-4" />
                       Shuffle Questions
                     </Label>
@@ -1346,8 +1553,7 @@ export default function TestDetailPage() {
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,
-                              duration_minutes:
-                                parseInt(e.target.value) || 0,
+                              duration_minutes: parseInt(e.target.value) || 0,
                             })
                           }
                           placeholder="Enter duration in minutes"
@@ -1364,8 +1570,7 @@ export default function TestDetailPage() {
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,
-                              total_marks:
-                                parseFloat(e.target.value) || 0,
+                              total_marks: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -1450,9 +1655,7 @@ export default function TestDetailPage() {
                             </p>
                             <p className="text-sm font-medium flex items-center gap-2">
                               <Calendar className="w-4 h-4" />
-                              {new Date(
-                                test.start_datetime,
-                              ).toLocaleString()}
+                              {new Date(test.start_datetime).toLocaleString()}
                             </p>
                           </div>
                         )}
@@ -1634,7 +1837,8 @@ export default function TestDetailPage() {
             <CardHeader>
               <CardTitle>Test Results</CardTitle>
               <CardDescription>
-                View all student results for this test ({studentsWithStatus.length} students)
+                View all student results for this test (
+                {studentsWithStatus.length} students)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1659,9 +1863,14 @@ export default function TestDetailPage() {
                     </thead>
                     <tbody>
                       {studentsWithStatus.map((student) => {
-                        const hasAttempted = student.attempt_status && student.attempt_status !== AttemptStatus.NOT_STARTED;
-                        const isEvaluated = student.attempt_status === AttemptStatus.EVALUATED;
-                        const isSubmitted = student.attempt_status === AttemptStatus.SUBMITTED || isEvaluated;
+                        const hasAttempted =
+                          student.attempt_status &&
+                          student.attempt_status !== AttemptStatus.NOT_STARTED;
+                        const isEvaluated =
+                          student.attempt_status === AttemptStatus.EVALUATED;
+                        const isSubmitted =
+                          student.attempt_status === AttemptStatus.SUBMITTED ||
+                          isEvaluated;
 
                         return (
                           <tr
@@ -1673,28 +1882,41 @@ export default function TestDetailPage() {
                               }
                             }}
                           >
-                            <td className="py-3 px-4 font-medium">{student.student_roll_number}</td>
-                            <td className="py-3 px-4">{student.student_name}</td>
-                            <td className="py-3 px-4 text-sm text-muted-foreground">{student.student_email}</td>
+                            <td className="py-3 px-4 font-medium">
+                              {student.student_roll_number}
+                            </td>
+                            <td className="py-3 px-4">
+                              {student.student_name}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-muted-foreground">
+                              {student.student_email}
+                            </td>
                             <td className="py-3 px-4">
                               {hasAttempted ? (
                                 getAttemptStatusBadge(student.attempt_status!)
                               ) : (
-                                <Badge variant="outline" className="bg-gray-100">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-gray-100"
+                                >
                                   Unattempted
                                 </Badge>
                               )}
                             </td>
                             {isPrelims && (
                               <td className="py-3 px-4">
-                                {isEvaluated && student.score !== null && student.score !== undefined
+                                {isEvaluated &&
+                                student.score !== null &&
+                                student.score !== undefined
                                   ? `${student.score}/${test.total_marks}`
                                   : "-"}
                               </td>
                             )}
                             {isPrelims && (
                               <td className="py-3 px-4">
-                                {isEvaluated && student.score !== null && student.score !== undefined ? (
+                                {isEvaluated &&
+                                student.score !== null &&
+                                student.score !== undefined ? (
                                   student.score >= (test.passing_marks || 0) ? (
                                     <Badge className="bg-green-500">Pass</Badge>
                                   ) : (
@@ -1707,7 +1929,9 @@ export default function TestDetailPage() {
                             )}
                             <td className="py-3 px-4 text-sm">
                               {student.submitted_at
-                                ? new Date(student.submitted_at).toLocaleString()
+                                ? new Date(
+                                    student.submitted_at,
+                                  ).toLocaleString()
                                 : "-"}
                             </td>
                             <td className="py-3 px-4">
@@ -1724,7 +1948,9 @@ export default function TestDetailPage() {
                                   View
                                 </Button>
                               ) : (
-                                <span className="text-sm text-muted-foreground">-</span>
+                                <span className="text-sm text-muted-foreground">
+                                  -
+                                </span>
                               )}
                             </td>
                           </tr>
@@ -1745,7 +1971,6 @@ export default function TestDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
 
       {/* Add Question Dialog */}
@@ -1803,6 +2028,65 @@ export default function TestDetailPage() {
                     <SelectItem value="4">Option 4</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Subject & Topic */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Subject *</Label>
+                <Select
+                  value={newQuestion.subject_id?.toString() || ""}
+                  onValueChange={(v) =>
+                    setNewQuestion({
+                      ...newQuestion,
+                      subject_id: v ? parseInt(v) : null,
+                      topic_id: null,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {testSubjectsTopics.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Topic *</Label>
+                {!newQuestion.subject_id ? (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Select a subject first
+                  </p>
+                ) : (
+                  <Select
+                    value={newQuestion.topic_id?.toString() || ""}
+                    onValueChange={(v) =>
+                      setNewQuestion({
+                        ...newQuestion,
+                        topic_id: v ? parseInt(v) : null,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select topic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {testSubjectsTopics
+                        .find((s) => s.id === newQuestion.subject_id)
+                        ?.topics.map((t) => (
+                          <SelectItem key={t.id} value={t.id.toString()}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -1871,7 +2155,9 @@ export default function TestDetailPage() {
               onClick={handleAddQuestion}
               disabled={
                 !newQuestion.question_text ||
-                newQuestion.options.some((o) => !o.option_text)
+                newQuestion.options.some((o) => !o.option_text) ||
+                !newQuestion.subject_id ||
+                !newQuestion.topic_id
               }
             >
               Add Question
@@ -1917,7 +2203,12 @@ export default function TestDetailPage() {
               <p className="font-medium mb-1">Excel format:</p>
               <p>
                 Columns: question_number, question_text, option_1, option_2,
-                option_3, option_4, correct_option, marks, solution
+                option_3, option_4, correct_option, marks, solution,
+                subject_name, topic_name
+              </p>
+              <p className="text-xs mt-1 text-amber-600">
+                subject_name and topic_name must match existing subjects and
+                topics in the course.
               </p>
             </div>
           </div>
@@ -1999,11 +2290,27 @@ function QuestionCard({
     <Card className="bg-white/80">
       <CardContent className="pt-4">
         <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
               {question.question_number}
             </span>
             <Badge variant="outline">{question.marks} marks</Badge>
+            {question.subject_name && (
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 text-xs"
+              >
+                {question.subject_name}
+              </Badge>
+            )}
+            {question.topic_name && (
+              <Badge
+                variant="outline"
+                className="bg-purple-50 text-purple-700 text-xs"
+              >
+                {question.topic_name}
+              </Badge>
+            )}
           </div>
           <Button
             variant="ghost"

@@ -5,7 +5,6 @@ import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchSubjects,
   addSubject,
   updateSubject,
   deleteSubject,
@@ -37,6 +36,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search, Plus, Download } from "lucide-react";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 interface Subject {
   id: number;
@@ -48,10 +49,9 @@ interface Subject {
 export default function SubjectsPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
-  const { subjects, error } = useAppSelector((state) => state.subjectsReducer);
+  const { error } = useAppSelector((state) => state.subjectsReducer);
   const { faculty } = useAppSelector((state) => state.facultyReducer);
-
-  const [search, setSearch] = useState("");
+  const pagination = useServerPagination<any>("/subjects", 10);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -62,7 +62,6 @@ export default function SubjectsPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchSubjects());
     dispatch(fetchFaculties());
   }, [dispatch]);
 
@@ -88,6 +87,7 @@ export default function SubjectsPage() {
       faculty_ids: [],
     });
     setIsAddDialogOpen(false);
+    pagination.refetch();
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -101,12 +101,14 @@ export default function SubjectsPage() {
     );
     setEditId(null);
     setIsEditDialogOpen(false);
+    pagination.refetch();
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Subject", description: "Are you sure you want to delete this subject?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      dispatch(deleteSubject(id));
+      await dispatch(deleteSubject(id));
+      pagination.refetch();
     }
   };
 
@@ -119,12 +121,6 @@ export default function SubjectsPage() {
     });
     setIsEditDialogOpen(true);
   };
-
-  const filtered = subjects.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.code.toLowerCase().includes(search.toLowerCase())
-  );
 
   const getFacultyNames = (facultyIds: number[]) => {
     return faculty
@@ -207,8 +203,8 @@ export default function SubjectsPage() {
             type="search"
             placeholder="Search subjects..."
             className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={pagination.search}
+            onChange={(e) => pagination.setSearch(e.target.value)}
           />
         </div>
       </div>
@@ -225,9 +221,9 @@ export default function SubjectsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((subject, idx) => (
+            {pagination.items.map((subject: any, idx: number) => (
               <TableRow key={subject.id}>
-                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{pagination.startIndex + idx}</TableCell>
                 <TableCell>{subject.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{subject.code}</Badge>
@@ -262,6 +258,7 @@ export default function SubjectsPage() {
           </TableBody>
         </Table>
       </div>
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="subjects" />
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">

@@ -92,6 +92,7 @@ class Test(Base):
     exam_type = Column(SQLEnum(ExamTypeEnum), nullable=False)
     category = Column(SQLEnum(TestCategoryEnum), nullable=False)
     sub_category_id = Column(Integer, ForeignKey("test_sub_categories.id"), nullable=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
 
     # Test settings
     status = Column(SQLEnum(TestStatusEnum), default=TestStatusEnum.DRAFT)
@@ -141,6 +142,10 @@ class TestQuestion(Base):
     question_text = Column(Text, nullable=False)
     question_image_url = Column(String, nullable=True)  # Optional image for question
 
+    # Subject/Topic classification
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
+    topic_id = Column(Integer, ForeignKey("topics.id"), nullable=True)
+
     # Correct answer index (1, 2, 3, or 4)
     correct_option = Column(Integer, nullable=False)
     marks = Column(Float, default=1)
@@ -154,6 +159,8 @@ class TestQuestion(Base):
     # Relationships
     test = relationship("Test", back_populates="questions")
     options = relationship("TestQuestionOption", back_populates="question", cascade="all, delete-orphan")
+    subject = relationship("Subject", foreign_keys=[subject_id])
+    topic = relationship("Topic", foreign_keys=[topic_id])
 
 
 class TestQuestionOption(Base):

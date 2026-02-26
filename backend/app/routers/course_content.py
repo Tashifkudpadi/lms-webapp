@@ -8,7 +8,9 @@ from app.models.course import Course
 from app.models.course_content import CourseContent
 from app.models.subject import Subject
 from app.models.topic import Topic
+from app.models.user import User, Role
 from app.schemas.course_content import CourseContentCreate, CourseContentOut, CourseContentUpdate
+from app.utils.auth import get_current_user, require_role
 from app.utils.minio_client import delete_file_from_minio
 
 router = APIRouter()
@@ -37,6 +39,7 @@ def upload_content(
     topic_id: int = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY)),
 ):
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
@@ -81,7 +84,7 @@ def upload_content(
 
 
 @router.post("/youtube", response_model=CourseContentOut)
-def add_youtube_content(content: CourseContentCreate, db: Session = Depends(get_db)):
+def add_youtube_content(content: CourseContentCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     course = db.query(Course).filter(Course.id == content.course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -116,7 +119,7 @@ def add_youtube_content(content: CourseContentCreate, db: Session = Depends(get_
 
 
 @router.post("/", response_model=CourseContentOut)
-def create_content(content: CourseContentCreate, db: Session = Depends(get_db)):
+def create_content(content: CourseContentCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     course = db.query(Course).filter(Course.id == content.course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -152,12 +155,12 @@ def create_content(content: CourseContentCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/course/{course_id}", response_model=List[CourseContentOut])
-def get_contents(course_id: int, db: Session = Depends(get_db)):
+def get_contents(course_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(CourseContent).filter(CourseContent.course_id == course_id).all()
 
 
 @router.get("/course/{course_id}/topic/{topic_id}", response_model=List[CourseContentOut])
-def get_contents_by_topic(course_id: int, topic_id: int, db: Session = Depends(get_db)):
+def get_contents_by_topic(course_id: int, topic_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get course contents filtered by course ID and topic ID."""
     return db.query(CourseContent).filter(
         CourseContent.course_id == course_id,
@@ -166,7 +169,7 @@ def get_contents_by_topic(course_id: int, topic_id: int, db: Session = Depends(g
 
 
 @router.put("/{content_id}", response_model=CourseContentOut)
-def update_content(content_id: int, update: CourseContentUpdate, db: Session = Depends(get_db)):
+def update_content(content_id: int, update: CourseContentUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     content = db.query(CourseContent).filter(
         CourseContent.id == content_id).first()
     if not content:
@@ -221,7 +224,7 @@ def delete_content_and_file(content: CourseContent, db: Session):
 
 
 @router.delete("/{content_id}")
-def delete_content(content_id: int, db: Session = Depends(get_db)):
+def delete_content(content_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     content = db.query(CourseContent).filter(
         CourseContent.id == content_id).first()
     if not content:
@@ -232,7 +235,7 @@ def delete_content(content_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/by-topic/{topic_id}")
-def delete_contents_by_topic(topic_id: int, db: Session = Depends(get_db)):
+def delete_contents_by_topic(topic_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """Delete all course contents for a specific topic."""
     contents = db.query(CourseContent).filter(CourseContent.topic_id == topic_id).all()
     for content in contents:
@@ -242,7 +245,7 @@ def delete_contents_by_topic(topic_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/by-subject/{subject_id}")
-def delete_contents_by_subject(subject_id: int, db: Session = Depends(get_db)):
+def delete_contents_by_subject(subject_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """Delete all course contents for a specific subject."""
     contents = db.query(CourseContent).filter(CourseContent.subject_id == subject_id).all()
     for content in contents:

@@ -3,15 +3,13 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchStudents,
   addStudent,
   updateStudent,
   deleteStudent,
 } from "@/store/students";
-import { fetchBatches } from "@/store/batches";
 import {
   Table,
   TableBody,
@@ -38,13 +36,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search, UserPlus, Download } from "lucide-react";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 export default function LearnersPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
-  const { students, error } = useAppSelector((state) => state.studentsReducer);
+  const { error } = useAppSelector((state) => state.studentsReducer);
+  const pagination = useServerPagination<any>("/students", 10);
 
-  const [search, setSearch] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -56,39 +56,50 @@ export default function LearnersPage() {
     enrollment_date: "",
   });
 
-  useEffect(() => {
-    dispatch(fetchStudents());
-  }, [dispatch]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(addStudent(formData));
-    setFormData({
-      name: "",
-      email: "",
-      roll_number: "",
-      mobile_number: "",
-      enrollment_date: "",
-    });
-    setIsAddDialogOpen(false);
+    const payload = {
+      ...formData,
+      enrollment_date: formData.enrollment_date || null,
+    };
+    const result = await dispatch(addStudent(payload));
+    if (result.meta.requestStatus === "fulfilled") {
+      setFormData({
+        name: "",
+        email: "",
+        roll_number: "",
+        mobile_number: "",
+        enrollment_date: "",
+      });
+      setIsAddDialogOpen(false);
+      pagination.refetch();
+    }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editId) return;
-    await dispatch(updateStudent({ studentId: editId, studentData: formData }));
-    setEditId(null);
-    setIsEditDialogOpen(false);
+    const payload = {
+      ...formData,
+      enrollment_date: formData.enrollment_date || null,
+    };
+    const result = await dispatch(updateStudent({ studentId: editId, studentData: payload }));
+    if (result.meta.requestStatus === "fulfilled") {
+      setEditId(null);
+      setIsEditDialogOpen(false);
+      pagination.refetch();
+    }
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Student", description: "Are you sure you want to delete this student?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      dispatch(deleteStudent(id));
+      await dispatch(deleteStudent(id));
+      pagination.refetch();
     }
   };
 
@@ -103,12 +114,6 @@ export default function LearnersPage() {
     });
     setIsEditDialogOpen(true);
   };
-
-  const filtered = students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="space-y-6 p-6">
@@ -182,8 +187,8 @@ export default function LearnersPage() {
             type="search"
             placeholder="Search students..."
             className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={pagination.search}
+            onChange={(e) => pagination.setSearch(e.target.value)}
           />
         </div>
       </div>
@@ -201,9 +206,9 @@ export default function LearnersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((s, idx) => (
+            {pagination.items.map((s: any, idx: number) => (
               <TableRow key={s.id}>
-                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{pagination.startIndex + idx}</TableCell>
                 <TableCell>{s.name}</TableCell>
                 <TableCell>{s.email}</TableCell>
                 <TableCell>{s.roll_number}</TableCell>
@@ -233,6 +238,7 @@ export default function LearnersPage() {
           </TableBody>
         </Table>
       </div>
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="students" />
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -240,6 +246,7 @@ export default function LearnersPage() {
             <DialogTitle>Edit Student</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <Input
               name="name"
               placeholder="Full Name"

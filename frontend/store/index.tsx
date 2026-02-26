@@ -10,6 +10,7 @@ import GlobalErrorReducer, { setGlobalError } from "./globalError";
 import CourseContentsReducer from "./courseContents";
 import TopicsReducer from "./topics";
 import TestsReducer from "./tests";
+import ZoomClassesReducer from "./zoomClasses";
 
 // Middleware to catch all rejected async thunks and surface as global error
 const globalErrorMiddleware: Middleware = (api) => (next) => (action: unknown) => {
@@ -53,6 +54,7 @@ export const store = configureStore({
     subjectsReducer: SubjectsReducer,
     globalErrorReducer: GlobalErrorReducer,
     testsReducer: TestsReducer,
+    zoomClassesReducer: ZoomClassesReducer,
   },
   middleware: (getDefault) => getDefault().concat(globalErrorMiddleware as any),
 });

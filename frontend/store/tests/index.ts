@@ -54,6 +54,10 @@ export interface TestQuestion {
   question_number: number;
   question_text: string;
   question_image_url?: string;
+  subject_id?: number;
+  topic_id?: number;
+  subject_name?: string;
+  topic_name?: string;
   correct_option: number;
   marks: number;
   solution?: string;
@@ -70,6 +74,7 @@ export interface Test {
   category: TestCategory;
   sub_category_id?: number;
   sub_category_name?: string;
+  subject_id?: number;
   activation_method: ActivationMethod;
   shuffle_questions: boolean;
   status: TestStatus;
@@ -98,16 +103,24 @@ export interface TestListItem {
   exam_type: ExamType;
   category: TestCategory;
   sub_category_name?: string;
+  subject_id?: number;
+  subject_name?: string;
   activation_method: ActivationMethod;
   status: TestStatus;
   duration_minutes?: number;
   total_marks: number;
+  passing_marks?: number;
   question_count: number;
   start_datetime?: string;
   end_datetime?: string;
   created_at: string;
   course_ids?: number[];
   batch_ids?: number[];
+  has_attempted?: boolean;
+  attempt_status?: string;
+  attempt_id?: number;
+  attempt_score?: number;
+  attempt_percentage?: number;
 }
 
 export interface TestAttempt {
@@ -166,12 +179,19 @@ export interface TestPreview extends Test {
   questions: TestQuestion[];
 }
 
+export interface TestSubjectWithTopics {
+  id: number;
+  name: string;
+  topics: { id: number; name: string }[];
+}
+
 interface TestsState {
   tests: TestListItem[];
   selected: Test | null;
   preview: TestPreview | null;
   subCategories: TestSubCategory[];
   questions: TestQuestion[];
+  testSubjectsTopics: TestSubjectWithTopics[];
   attempts: TestAttempt[];
   studentsWithStatus: StudentWithAttemptStatus[];
   attemptReview: TestAttemptWithAnswers | null;
@@ -186,6 +206,7 @@ const initialState: TestsState = {
   preview: null,
   subCategories: [],
   questions: [],
+  testSubjectsTopics: [],
   attempts: [],
   studentsWithStatus: [],
   attemptReview: null,
@@ -213,7 +234,7 @@ export const fetchTests = createAsyncThunk(
 
     const url = `/tests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
     const response = await axiosInstance.get(url);
-    return response.data;
+    return response.data.items;
   }
 );
 
@@ -231,7 +252,7 @@ export const fetchMyTests = createAsyncThunk(
 
     const url = `/tests/my-tests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
     const response = await axiosInstance.get(url);
-    return response.data;
+    return response.data.items;
   }
 );
 
@@ -300,6 +321,15 @@ export const deleteSubCategory = createAsyncThunk(
   async (subCatId: number) => {
     await axiosInstance.delete(`/tests/sub-categories/${subCatId}`);
     return subCatId;
+  }
+);
+
+// Subjects/Topics for a test (based on test's courses)
+export const fetchTestSubjectsTopics = createAsyncThunk(
+  "tests/fetchTestSubjectsTopics",
+  async (testId: number) => {
+    const response = await axiosInstance.get(`/tests/${testId}/subjects-topics`);
+    return response.data;
   }
 );
 
@@ -527,6 +557,10 @@ const testsSlice = createSlice({
         state.subCategories = state.subCategories.filter(
           (sc) => sc.id !== action.payload
         );
+      })
+      // Test Subjects/Topics
+      .addCase(fetchTestSubjectsTopics.fulfilled, (state, action) => {
+        state.testSubjectsTopics = action.payload;
       })
       // Questions
       .addCase(fetchQuestions.fulfilled, (state, action) => {

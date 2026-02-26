@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useToast } from "@/hooks/use-toast";
+import { useAppSelector } from "@/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +25,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Trash2, UserPlus, Search, Users } from "lucide-react";
 import axiosInstance from "@/utils/axios";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Learner = {
   id: number;
@@ -48,39 +51,33 @@ type Student = {
 export default function LearnersTab({ courseId }: { courseId: string | number }) {
   const confirm = useConfirm();
   const { toast } = useToast();
-  const [learners, setLearners] = useState<Learner[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAppSelector((state) => state.authReducer);
+  const isAdmin = user?.role === "admin";
+  const pagination = useServerPagination<Learner>(`/courses/${courseId}/learners`, 10);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [courseLearnerIds, setCourseLearnerIds] = useState<Set<number>>(new Set());
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [addingStudent, setAddingStudent] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchLearners = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await axiosInstance.get(`/courses/${courseId}/learners`);
-      setLearners(res.data || []);
-    } catch (e) {
-      console.error("Failed to fetch learners", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId]);
-
   const fetchAllStudents = useCallback(async () => {
     try {
       const res = await axiosInstance.get("/students");
-      setAllStudents(res.data || []);
+      setAllStudents(res.data.items || []);
     } catch (e) {
       console.error("Failed to fetch students", e);
     }
   }, []);
 
-  useEffect(() => {
-    fetchLearners();
-  }, [fetchLearners]);
+  const fetchCourseLearnerIds = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get(`/courses/${courseId}/learners`);
+      setCourseLearnerIds(new Set((res.data.items || []).map((l: any) => l.id)));
+    } catch (e) {
+      console.error("Failed to fetch learner IDs", e);
+    }
+  }, [courseId]);
 
   const handleRemoveLearner = async (learner: Learner) => {
     const message =
@@ -96,7 +93,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
       await axiosInstance.delete(
         `/courses/${courseId}/learners/${learner.id}${params}`
       );
-      await fetchLearners();
+      pagination.refetch();
     } catch (e: any) {
       toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove learner", variant: "destructive" });
     }
@@ -107,7 +104,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
     setAddingStudent(true);
     try {
       await axiosInstance.post(`/courses/${courseId}/learners/${student.id}`);
-      await fetchLearners();
+      pagination.refetch();
       setShowAddDialog(false);
       setStudentSearchQuery("");
     } catch (e: any) {
@@ -121,23 +118,14 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
     setError("");
     setStudentSearchQuery("");
     fetchAllStudents();
+    fetchCourseLearnerIds();
     setShowAddDialog(true);
   };
 
-  // Filter learners by search query
-  const filteredLearners = learners.filter(
-    (l) =>
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.roll_number || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.batch_name || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Filter students for add dialog (exclude already added)
-  const learnerIds = new Set(learners.map((l) => l.id));
   const availableStudents = allStudents.filter(
     (s) =>
-      !learnerIds.has(s.id) &&
+      !courseLearnerIds.has(s.id) &&
       (s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
         s.email.toLowerCase().includes(studentSearchQuery.toLowerCase()))
   );
@@ -162,16 +150,18 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
         <div className="flex items-center gap-3">
           <Users className="h-6 w-6 text-blue-600" />
           <h3 className="text-xl font-bold text-slate-900">
-            Learners ({learners.length})
+            Learners ({pagination.totalItems})
           </h3>
         </div>
-        <Button
-          onClick={openAddDialog}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Learner
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={openAddDialog}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Learner
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -179,8 +169,8 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
         <Input
           placeholder="Search by name, email, roll number, or batch..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={pagination.search}
+          onChange={(e) => pagination.setSearch(e.target.value)}
           className="pl-10"
         />
       </div>
@@ -195,26 +185,26 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
               <TableHead className="font-semibold text-slate-700">Roll Number</TableHead>
               <TableHead className="font-semibold text-slate-700">Mobile No.</TableHead>
               <TableHead className="font-semibold text-slate-700">Enrollment Date</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
+              {isAdmin && <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {pagination.loading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   Loading learners...
                 </TableCell>
               </TableRow>
-            ) : filteredLearners.length === 0 ? (
+            ) : pagination.items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                  {searchQuery
+                  {pagination.search
                     ? "No learners match your search"
                     : "No learners in this course yet"}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLearners.map((learner) => (
+              pagination.items.map((learner) => (
                 <TableRow key={`${learner.id}-${learner.source}`} className="hover:bg-slate-50">
                   <TableCell>
                     <div className="flex flex-col">
@@ -242,22 +232,26 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
                   <TableCell className="text-slate-700">
                     {formatDate(learner.enrollment_date)}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveLearner(learner)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveLearner(learner)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="learners" />
 
       {/* Add Learner Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

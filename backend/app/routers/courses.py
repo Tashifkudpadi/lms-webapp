@@ -1,9 +1,10 @@
 from app.models.user import Role
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, require_role
+from app.models.user import User
 from sqlalchemy import or_
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database import get_db
 from app.models.course import Course
 from app.models.batch import Batch
@@ -41,7 +42,7 @@ def build_subjects_with_topics(course, topic_ids: List[int]) -> List[SubjectOutN
 
 
 @router.post("/", response_model=CourseOut)
-def create_course(course: CourseCreate, db: Session = Depends(get_db)):
+def create_course(course: CourseCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     db_course = Course(
         course_name=course.course_name,
         course_desc=course.course_desc,
@@ -88,20 +89,19 @@ def create_course(course: CourseCreate, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/", response_model=List[CourseOut])
+@router.get("/")
 def get_courses(
+    skip: int = 0,
+    limit: int = 0,
+    search: str = "",
+    is_public: Optional[bool] = None,
+    is_active: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     query = db.query(Course)
 
-    # ✅ Admin gets all courses
-    if current_user.role == Role.ADMIN:
-        courses = query.all()
-
-    else:
-        # ✅ Everyone can see public courses
-        # plus their own (depending on role)
+    if current_user.role != Role.ADMIN:
         base_filter = Course.is_public.is_(True)
 
         if current_user.role == Role.STUDENT:
@@ -121,12 +121,13 @@ def get_courses(
             query = query.filter(or_(base_filter, role_filter))
 
         else:
-            # any other role (e.g., viewer) can see only public
             query = query.filter(base_filter)
 
-        courses = query.distinct().all()
+        query = query.distinct()
 
-    return [
+    courses = query.order_by(Course.created_at.desc()).all()
+
+    items = [
         CourseOut(
             id=c.id,
             course_name=c.course_name,
@@ -144,6 +145,23 @@ def get_courses(
         )
         for c in courses
     ]
+
+    if search:
+        search_lower = search.lower()
+        items = [c for c in items if search_lower in c.course_name.lower()]
+
+    if is_public is not None:
+        items = [c for c in items if c.is_public == is_public]
+
+    if is_active is not None:
+        items = [c for c in items if c.is_active == is_active]
+
+    total = len(items)
+
+    if limit > 0:
+        items = items[skip:skip + limit]
+
+    return {"items": items, "total": total}
 
 
 @router.get("/{course_id}", response_model=CourseOut)
@@ -189,7 +207,7 @@ def get_course(
 
 
 @router.put("/{course_id}", response_model=CourseOut)
-def update_course(course_id: int, update: CourseUpdate, db: Session = Depends(get_db)):
+def update_course(course_id: int, update: CourseUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -237,7 +255,7 @@ def update_course(course_id: int, update: CourseUpdate, db: Session = Depends(ge
 
 
 @router.delete("/{course_id}")
-def delete_course(course_id: int, db: Session = Depends(get_db)):
+def delete_course(course_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -247,7 +265,7 @@ def delete_course(course_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{course_id}/subject/{subject_id}")
-def remove_subject_from_course(course_id: int, subject_id: int, db: Session = Depends(get_db)):
+def remove_subject_from_course(course_id: int, subject_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Remove a subject from a course:
     1. Delete all course contents for this subject in this course (including MinIO files)
@@ -289,7 +307,7 @@ def remove_subject_from_course(course_id: int, subject_id: int, db: Session = De
 
 
 @router.delete("/{course_id}/topic/{topic_id}")
-def remove_topic_from_course(course_id: int, topic_id: int, db: Session = Depends(get_db)):
+def remove_topic_from_course(course_id: int, topic_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Remove a topic from a course:
     1. Delete all course contents for this topic in this course (including MinIO files)
@@ -348,8 +366,8 @@ class LearnerOut(BaseModel):
         from_attributes = True
 
 
-@router.get("/{course_id}/learners", response_model=List[LearnerOut])
-def get_course_learners(course_id: int, db: Session = Depends(get_db)):
+@router.get("/{course_id}/learners")
+def get_course_learners(course_id: int, skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Get all learners (students) for a course.
     Returns students directly added to course + students from linked batches.
@@ -361,7 +379,6 @@ def get_course_learners(course_id: int, db: Session = Depends(get_db)):
     learners = []
     seen_student_ids = set()
 
-    # 1. Get students from batches linked to the course
     for batch in course.batches:
         for student in batch.students:
             if student.id not in seen_student_ids:
@@ -378,7 +395,6 @@ def get_course_learners(course_id: int, db: Session = Depends(get_db)):
                     source="batch"
                 ))
 
-    # 2. Get students directly added to the course
     for student in course.students:
         if student.id not in seen_student_ids:
             seen_student_ids.add(student.id)
@@ -394,11 +410,20 @@ def get_course_learners(course_id: int, db: Session = Depends(get_db)):
                 source="direct"
             ))
 
-    return learners
+    if search:
+        search_lower = search.lower()
+        learners = [l for l in learners if search_lower in (l.name or "").lower() or search_lower in (l.email or "").lower()]
+
+    total = len(learners)
+
+    if limit > 0:
+        learners = learners[skip:skip + limit]
+
+    return {"items": learners, "total": total}
 
 
 @router.post("/{course_id}/learners/{student_id}")
-def add_learner_to_course(course_id: int, student_id: int, db: Session = Depends(get_db)):
+def add_learner_to_course(course_id: int, student_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Add a student directly to the course.
     Validates that the student is not already in a batch linked to the course.
@@ -434,7 +459,8 @@ def remove_learner_from_course(
     course_id: int,
     student_id: int,
     batch_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.ADMIN)),
 ):
     """
     Remove a student from the course.
@@ -484,8 +510,8 @@ class CourseBatchOut(BaseModel):
         from_attributes = True
 
 
-@router.get("/{course_id}/batches", response_model=List[CourseBatchOut])
-def get_course_batches(course_id: int, db: Session = Depends(get_db)):
+@router.get("/{course_id}/batches")
+def get_course_batches(course_id: int, skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Get all batches linked to a course with learner and faculty counts.
     """
@@ -503,11 +529,21 @@ def get_course_batches(course_id: int, db: Session = Depends(get_db)):
             num_learners=len(batch.students),
             num_faculties=len(batch.faculties),
         ))
-    return batches
+
+    if search:
+        search_lower = search.lower()
+        batches = [b for b in batches if search_lower in b.name.lower()]
+
+    total = len(batches)
+
+    if limit > 0:
+        batches = batches[skip:skip + limit]
+
+    return {"items": batches, "total": total}
 
 
 @router.post("/{course_id}/batches/{batch_id}")
-def add_batch_to_course(course_id: int, batch_id: int, db: Session = Depends(get_db)):
+def add_batch_to_course(course_id: int, batch_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Add a batch to the course.
     """
@@ -541,7 +577,7 @@ def add_batch_to_course(course_id: int, batch_id: int, db: Session = Depends(get
 
 
 @router.delete("/{course_id}/batches/{batch_id}")
-def remove_batch_from_course(course_id: int, batch_id: int, db: Session = Depends(get_db)):
+def remove_batch_from_course(course_id: int, batch_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Remove a batch from the course.
     This only unlinks the batch - students remain in the batch.

@@ -5,7 +5,6 @@ import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchFaculties,
   addFaculty,
   updateFaculty,
   deleteFaculty,
@@ -37,7 +36,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search, UserPlus, Download } from "lucide-react";
-import { log } from "node:console";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 interface Faculty {
   id: number;
@@ -50,11 +50,9 @@ interface Faculty {
 export default function FacultiesPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
-  const { faculty, error } = useAppSelector((state) => state.facultyReducer);
+  const { error } = useAppSelector((state) => state.facultyReducer);
   const { subjects } = useAppSelector((state) => state.subjectsReducer);
-  console.log("subjects", subjects);
-
-  const [search, setSearch] = useState("");
+  const pagination = useServerPagination<any>("/faculties", 10);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -66,7 +64,6 @@ export default function FacultiesPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchFaculties());
     dispatch(fetchSubjects());
   }, [dispatch]);
 
@@ -85,33 +82,40 @@ export default function FacultiesPage() {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(addFaculty(formData));
-    setFormData({
-      name: "",
-      email: "",
-      mobile_number: "",
-      subject_ids: [],
-    });
-    setIsAddDialogOpen(false);
+    const result = await dispatch(addFaculty(formData));
+    if (result.meta.requestStatus === "fulfilled") {
+      setFormData({
+        name: "",
+        email: "",
+        mobile_number: "",
+        subject_ids: [],
+      });
+      setIsAddDialogOpen(false);
+      pagination.refetch();
+    }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editId) return;
-    await dispatch(
+    const result = await dispatch(
       updateFaculty({
         facultyId: editId,
         facultyData: formData,
       })
     );
-    setEditId(null);
-    setIsEditDialogOpen(false);
+    if (result.meta.requestStatus === "fulfilled") {
+      setEditId(null);
+      setIsEditDialogOpen(false);
+      pagination.refetch();
+    }
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Faculty", description: "Are you sure you want to delete this faculty?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      dispatch(deleteFaculty(id));
+      await dispatch(deleteFaculty(id));
+      pagination.refetch();
     }
   };
 
@@ -125,13 +129,6 @@ export default function FacultiesPage() {
     });
     setIsEditDialogOpen(true);
   };
-
-  const filtered = faculty.filter(
-    (f) =>
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.email.toLowerCase().includes(search.toLowerCase()) ||
-      f.mobile_number.toLowerCase().includes(search.toLowerCase())
-  );
 
   const getSubjectNames = (subjectIds: number[]) => {
     return subjects
@@ -220,8 +217,8 @@ export default function FacultiesPage() {
             type="search"
             placeholder="Search faculty..."
             className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={pagination.search}
+            onChange={(e) => pagination.setSearch(e.target.value)}
           />
         </div>
       </div>
@@ -239,9 +236,9 @@ export default function FacultiesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((facultyMember, idx) => (
+            {pagination.items.map((facultyMember: any, idx: number) => (
               <TableRow key={facultyMember.id}>
-                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{pagination.startIndex + idx}</TableCell>
                 <TableCell>{facultyMember.name}</TableCell>
                 <TableCell>{facultyMember.email}</TableCell>
                 <TableCell>{facultyMember.mobile_number}</TableCell>
@@ -275,6 +272,7 @@ export default function FacultiesPage() {
           </TableBody>
         </Table>
       </div>
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="faculties" />
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -282,6 +280,7 @@ export default function FacultiesPage() {
             <DialogTitle>Edit Faculty</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <Input
               name="name"
               placeholder="Name"

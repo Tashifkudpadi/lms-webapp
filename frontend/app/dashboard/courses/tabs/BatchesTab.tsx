@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useToast } from "@/hooks/use-toast";
+import { useAppSelector } from "@/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Plus, Search, Users, GraduationCap, Calendar } from "lucide-react";
 import axiosInstance from "@/utils/axios";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type CourseBatch = {
   id: number;
@@ -41,42 +44,35 @@ type Batch = {
 };
 
 export default function BatchesTab({ courseId }: { courseId: string | number }) {
-  const [batches, setBatches] = useState<CourseBatch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const confirm = useConfirm();
+  const { toast } = useToast();
+  const { user } = useAppSelector((state) => state.authReducer);
+  const isAdmin = user?.role === "admin";
+  const pagination = useServerPagination<CourseBatch>(`/courses/${courseId}/batches`, 10);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [allBatches, setAllBatches] = useState<Batch[]>([]);
+  const [courseBatchIds, setCourseBatchIds] = useState<Set<number>>(new Set());
   const [batchSearchQuery, setBatchSearchQuery] = useState("");
   const [addingBatch, setAddingBatch] = useState(false);
   const [error, setError] = useState("");
 
-  const confirm = useConfirm();
-  const { toast } = useToast();
-
-  const fetchCourseBatches = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await axiosInstance.get(`/courses/${courseId}/batches`);
-      setBatches(res.data || []);
-    } catch (e) {
-      console.error("Failed to fetch course batches", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId]);
-
   const fetchAllBatches = useCallback(async () => {
     try {
       const res = await axiosInstance.get("/batches");
-      setAllBatches(res.data || []);
+      setAllBatches(res.data.items || []);
     } catch (e) {
       console.error("Failed to fetch all batches", e);
     }
   }, []);
 
-  useEffect(() => {
-    fetchCourseBatches();
-  }, [fetchCourseBatches]);
+  const fetchCourseBatchIds = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get(`/courses/${courseId}/batches`);
+      setCourseBatchIds(new Set((res.data.items || []).map((b: any) => b.id)));
+    } catch (e) {
+      console.error("Failed to fetch course batch IDs", e);
+    }
+  }, [courseId]);
 
   const handleRemoveBatch = async (batch: CourseBatch) => {
     const ok = await confirm({ title: "Remove Batch", description: `Remove batch "${batch.name}" from this course? This will not delete the batch itself, only unlink it from this course.`, confirmLabel: "Remove", variant: "destructive" });
@@ -84,7 +80,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
 
     try {
       await axiosInstance.delete(`/courses/${courseId}/batches/${batch.id}`);
-      await fetchCourseBatches();
+      pagination.refetch();
     } catch (e: any) {
       toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove batch", variant: "destructive" });
     }
@@ -95,7 +91,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
     setAddingBatch(true);
     try {
       await axiosInstance.post(`/courses/${courseId}/batches/${batch.id}`);
-      await fetchCourseBatches();
+      pagination.refetch();
       setShowAddDialog(false);
       setBatchSearchQuery("");
     } catch (e: any) {
@@ -109,19 +105,14 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
     setError("");
     setBatchSearchQuery("");
     fetchAllBatches();
+    fetchCourseBatchIds();
     setShowAddDialog(true);
   };
 
-  // Filter course batches by search query
-  const filteredBatches = batches.filter((b) =>
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Filter batches for add dialog (exclude already linked)
-  const linkedBatchIds = new Set(batches.map((b) => b.id));
   const availableBatches = allBatches.filter(
     (b) =>
-      !linkedBatchIds.has(b.id) &&
+      !courseBatchIds.has(b.id) &&
       b.name.toLowerCase().includes(batchSearchQuery.toLowerCase())
   );
 
@@ -138,9 +129,6 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
     }
   };
 
-  // Calculate total learners across all batches
-  const totalLearners = batches.reduce((sum, b) => sum + b.num_learners, 0);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -148,19 +136,18 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
         <div className="flex items-center gap-3">
           <GraduationCap className="h-6 w-6 text-purple-600" />
           <h3 className="text-xl font-bold text-slate-900">
-            Batches ({batches.length})
+            Batches ({pagination.totalItems})
           </h3>
-          <Badge variant="secondary" className="bg-purple-100 text-purple-700 ml-2">
-            {totalLearners} Total Learners
-          </Badge>
         </div>
-        <Button
-          onClick={openAddDialog}
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Batch
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={openAddDialog}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Batch
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -168,8 +155,8 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
         <Input
           placeholder="Search batches by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={pagination.search}
+          onChange={(e) => pagination.setSearch(e.target.value)}
           className="pl-10"
         />
       </div>
@@ -184,26 +171,26 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
               <TableHead className="font-semibold text-slate-700">Faculties</TableHead>
               <TableHead className="font-semibold text-slate-700">Start Date</TableHead>
               <TableHead className="font-semibold text-slate-700">End Date</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
+              {isAdmin && <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {pagination.loading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   Loading batches...
                 </TableCell>
               </TableRow>
-            ) : filteredBatches.length === 0 ? (
+            ) : pagination.items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                  {searchQuery
+                  {pagination.search
                     ? "No batches match your search"
                     : "No batches linked to this course yet"}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredBatches.map((batch) => (
+              pagination.items.map((batch) => (
                 <TableRow key={batch.id} className="hover:bg-slate-50">
                   <TableCell>
                     <span className="font-medium text-slate-900">{batch.name}</span>
@@ -232,22 +219,26 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
                       <span className="text-slate-700">{formatDate(batch.end_date)}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveBatch(batch)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveBatch(batch)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="batches" />
 
       {/* Add Batch Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

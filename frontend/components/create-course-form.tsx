@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +22,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Upload, BookOpen, Globe, ImageIcon, X, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  BookOpen,
+  Globe,
+  ImageIcon,
+  X,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store";
-import { fetchBatches } from "@/store/batches";
+import { fetchBatches, Batch } from "@/store/batches";
 import { fetchStudents } from "@/store/students";
 import { fetchFaculties } from "@/store/faculties";
+import { fetchSubjects } from "@/store/subjects";
 import { MultiSelect } from "@/components/ui/multi-select"; // ✅ your component
 import { clearError, createCourse } from "@/store/courses";
 import { uploadToMinio } from "@/utils/uploadToMinio";
@@ -35,9 +45,10 @@ import Image from "next/image";
 
 interface CreateCourseFormProps {
   children: React.ReactNode;
+  onSuccess?: () => void;
 }
 
-export default function CreateCourseForm({ children }: CreateCourseFormProps) {
+export default function CreateCourseForm({ children, onSuccess }: CreateCourseFormProps) {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -48,42 +59,107 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ selections state
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
 
   // ✅ get data from Redux store
+  const subjects = useAppSelector(
+    (state: RootState) => state.subjectsReducer.subjects,
+  );
   const students = useAppSelector(
-    (state: RootState) => state.studentsReducer.students
+    (state: RootState) => state.studentsReducer.students,
   );
   const faculties = useAppSelector(
-    (state: RootState) => state.facultyReducer.faculty
+    (state: RootState) => state.facultyReducer.faculty,
   );
   const batches = useAppSelector(
-    (state: RootState) => state.batchesReducer.batches
+    (state: RootState) => state.batchesReducer.batches,
   );
   const { error } = useAppSelector((state: RootState) => state.coursesReducer);
 
+  // Filter faculties to only those mapped to selected subjects
+  const filteredFaculties = useMemo(() => {
+    if (selectedSubjects.length === 0) return [];
+    const subjectIdSet = new Set(selectedSubjects.map(Number));
+    return faculties.filter((f) =>
+      f.subject_ids?.some((sid) => subjectIdSet.has(sid)),
+    );
+  }, [faculties, selectedSubjects]);
+
+  // Check for batch faculty conflicts
+  const batchFacultyWarning = useMemo(() => {
+    if (selectedBatches.length === 0 || selectedSubjects.length === 0)
+      return null;
+    const filteredFacultyIds = new Set(filteredFaculties.map((f) => f.id));
+    const unmappedFaculties: { batchName: string; facultyNames: string[] }[] =
+      [];
+
+    for (const batchIdStr of selectedBatches) {
+      const batch = batches.find((b) => b.id === Number(batchIdStr));
+      if (!batch?.faculty_ids?.length) continue;
+      const missing = batch.faculty_ids
+        .filter((fid) => !filteredFacultyIds.has(fid))
+        .map((fid) => faculties.find((f) => f.id === fid)?.name)
+        .filter(Boolean) as string[];
+      if (missing.length > 0) {
+        unmappedFaculties.push({
+          batchName: batch.name,
+          facultyNames: missing,
+        });
+      }
+    }
+    return unmappedFaculties.length > 0 ? unmappedFaculties : null;
+  }, [
+    selectedBatches,
+    selectedSubjects,
+    batches,
+    faculties,
+    filteredFaculties,
+  ]);
+
+  // When subjects change, remove any selected faculties that are no longer in the filtered list
+  useEffect(() => {
+    if (selectedSubjects.length === 0) {
+      setSelectedFaculties([]);
+      return;
+    }
+    const filteredIds = new Set(filteredFaculties.map((f) => f.id.toString()));
+    setSelectedFaculties((prev) => prev.filter((id) => filteredIds.has(id)));
+  }, [selectedSubjects, filteredFaculties]);
+
   useEffect(() => {
     if (!open) return;
+    dispatch(fetchSubjects());
     dispatch(fetchBatches());
     dispatch(fetchStudents());
     dispatch(fetchFaculties());
   }, [dispatch, open]);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid file", description: "Please select an image file (PNG, JPG, etc.)", variant: "destructive" });
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file (PNG, JPG, etc.)",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Image size should be less than 2MB", variant: "destructive" });
+      toast({
+        title: "File too large",
+        description: "Image size should be less than 2MB",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -93,7 +169,11 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
       setCourseImage(fileUrl);
     } catch (err) {
       console.error("Failed to upload image:", err);
-      toast({ title: "Upload failed", description: "Failed to upload image. Please try again.", variant: "destructive" });
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -113,6 +193,7 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
     const payload = {
       course_name: (event.target as any).title.value,
       course_desc: (event.target as any).description.value,
+      subject_ids: selectedSubjects.map((id) => Number(id)),
       student_ids: selectedStudents.map((id) => Number(id)),
       faculty_ids: selectedFaculties.map((id) => Number(id)),
       batch_ids: selectedBatches.map((id) => Number(id)),
@@ -126,6 +207,8 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
 
       setIsLoading(false);
       setOpen(false);
+      onSuccess?.();
+      setSelectedSubjects([]);
       setSelectedBatches([]);
       setSelectedFaculties([]);
       setSelectedStudents([]);
@@ -186,6 +269,41 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
               {/* ✅ multi-selects */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Subjects *</Label>
+                  <MultiSelect
+                    options={subjects.map((s) => ({
+                      label: s.name,
+                      value: s.id.toString(),
+                    }))}
+                    selected={selectedSubjects}
+                    onChange={setSelectedSubjects}
+                    placeholder="Select subjects..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Faculties *</Label>
+                  <MultiSelect
+                    options={filteredFaculties.map((f) => ({
+                      label: f.name,
+                      value: f.id.toString(),
+                    }))}
+                    selected={selectedFaculties}
+                    onChange={setSelectedFaculties}
+                    placeholder={
+                      selectedSubjects.length === 0
+                        ? "Select subjects first..."
+                        : "Select faculties..."
+                    }
+                  />
+                  {selectedSubjects.length === 0 && (
+                    <p className="text-xs text-slate-500">
+                      Select subjects to see available faculties
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label>Students *</Label>
                   <MultiSelect
                     options={students.map((s) => ({
@@ -195,19 +313,6 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
                     selected={selectedStudents}
                     onChange={setSelectedStudents}
                     placeholder="Select students..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Faculties *</Label>
-                  <MultiSelect
-                    options={faculties.map((f) => ({
-                      label: f.name,
-                      value: f.id.toString(),
-                    }))}
-                    selected={selectedFaculties}
-                    onChange={setSelectedFaculties}
-                    placeholder="Select faculties..."
                   />
                 </div>
 
@@ -224,6 +329,31 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
                   />
                 </div>
               </div>
+
+              {/* Batch faculty warning */}
+              {batchFacultyWarning && (
+                <div className="flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium mb-1">
+                      Some batch faculties are not mapped to the selected
+                      subjects
+                    </p>
+                    <ul className="space-y-1">
+                      {batchFacultyWarning.map((w) => (
+                        <li key={w.batchName}>
+                          <span className="font-medium">{w.batchName}</span>:{" "}
+                          {w.facultyNames.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-amber-600">
+                      These faculties won&apos;t appear in the faculty dropdown
+                      unless their subjects are selected.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -247,7 +377,10 @@ export default function CreateCourseForm({ children }: CreateCourseFormProps) {
                         Make this course visible to all users
                       </p>
                     </div>
-                    <Switch checked={isPublic} onCheckedChange={setIsPublic} />{" "}
+                    <Switch
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />{" "}
                   </div>
                 </div>
                 <div className="space-y-4">

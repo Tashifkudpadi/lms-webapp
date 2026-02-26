@@ -5,13 +5,15 @@ from app.database import get_db
 from app.models.batch import Batch
 from app.models.student import Student
 from app.models.faculty import Faculty
+from app.models.user import User, Role
 from app.schemas.batch import BatchCreate, BatchUpdate, BatchOut
+from app.utils.auth import get_current_user, require_role
 
 router = APIRouter()
 
 
 @router.post("/", response_model=BatchOut)
-def create_batch(batch: BatchCreate, db: Session = Depends(get_db)):
+def create_batch(batch: BatchCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     db_batch = Batch(
         name=batch.name,
         start_date=batch.start_date,
@@ -45,25 +47,38 @@ def create_batch(batch: BatchCreate, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/", response_model=List[BatchOut])
-def get_batches(db: Session = Depends(get_db)):
-    batches = db.query(Batch).all()
-    return [
-        BatchOut(
-            id=b.id,
-            name=b.name,
-            start_date=b.start_date,
-            end_date=b.end_date,
-            num_learners=len(b.students),
-            student_ids=[s.id for s in b.students],
-            faculty_ids=[f.id for f in b.faculties],
-        )
-        for b in batches
-    ]
+@router.get("/")
+def get_batches(skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Batch)
+
+    if search:
+        query = query.filter(Batch.name.ilike(f"%{search}%"))
+
+    total = query.count()
+
+    if limit > 0:
+        query = query.offset(skip).limit(limit)
+
+    batches = query.all()
+    return {
+        "items": [
+            BatchOut(
+                id=b.id,
+                name=b.name,
+                start_date=b.start_date,
+                end_date=b.end_date,
+                num_learners=len(b.students),
+                student_ids=[s.id for s in b.students],
+                faculty_ids=[f.id for f in b.faculties],
+            )
+            for b in batches
+        ],
+        "total": total,
+    }
 
 
 @router.get("/{batch_id}", response_model=BatchOut)
-def get_batch(batch_id: int, db: Session = Depends(get_db)):
+def get_batch(batch_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     batch = db.query(Batch).filter(Batch.id == batch_id).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
@@ -80,7 +95,7 @@ def get_batch(batch_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{batch_id}", response_model=BatchOut)
-def update_batch(batch_id: int, update: BatchUpdate, db: Session = Depends(get_db)):
+def update_batch(batch_id: int, update: BatchUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     batch = db.query(Batch).filter(Batch.id == batch_id).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
@@ -113,7 +128,7 @@ def update_batch(batch_id: int, update: BatchUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/{batch_id}")
-def delete_batch(batch_id: int, db: Session = Depends(get_db)):
+def delete_batch(batch_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     batch = db.query(Batch).filter(Batch.id == batch_id).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")

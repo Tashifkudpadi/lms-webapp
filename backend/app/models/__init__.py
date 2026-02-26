@@ -8,6 +8,7 @@ from .batch import Batch  # type: ignore
 from .topic import Topic  # type: ignore
 from .course import Course  # type: ignore
 from .course_content import CourseContent  # type: ignore
+from .zoom_class import ZoomClass  # type: ignore
 from .test import (  # type: ignore
     Test,
     TestSubCategory,

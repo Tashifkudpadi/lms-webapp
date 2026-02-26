@@ -4,10 +4,14 @@ export async function uploadToMinio(file: File, objectName?: string) {
     `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
 
   // 1️⃣ Get presigned URL from backend
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const res = await fetch(
     `http://127.0.0.1:8000/course-contents/upload-url?file_name=${encodeURIComponent(
       uniqueName
-    )}&content_type=${encodeURIComponent(file.type)}`
+    )}&content_type=${encodeURIComponent(file.type)}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
   );
 
   if (!res.ok) {

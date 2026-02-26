@@ -158,6 +158,8 @@ export default function ContentsTab({
   const dispatch = useDispatch<AppDispatch>();
   const confirm = useConfirm();
   const { toast } = useToast();
+  const { user } = useSelector((s: RootState) => s.authReducer);
+  const isStudent = user?.role === "student";
   const [uploading, setUploading] = React.useState(false);
   const [file, setFile] = React.useState<File | null>(null);
   const [fileName, setFileName] = React.useState<string>("");
@@ -502,13 +504,12 @@ export default function ContentsTab({
       if (!c.file_url) return;
       const parts = String(c.file_url).split("/");
       const objectName = decodeURIComponent(parts[parts.length - 1]);
-      const resp = await fetch(
-        `http://127.0.0.1:8000/course-contents/download-url?file_name=${encodeURIComponent(
+      const resp = await axiosInstance.get(
+        `/course-contents/download-url?file_name=${encodeURIComponent(
           objectName,
         )}`,
       );
-      if (!resp.ok) return;
-      const { download_url } = await resp.json();
+      const { download_url } = resp.data;
       const a = document.createElement("a");
       a.href = download_url;
       a.download = c.title || objectName;
@@ -617,15 +618,17 @@ export default function ContentsTab({
                         {topics.length}{" "}
                         {topics.length === 1 ? "topic" : "topics"}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSubject(s.id)}
-                        className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 border border-transparent hover:border-red-100"
-                        aria-label="Delete subject"
-                        title="Delete subject"
-                      >
-                        <Trash2 className="h-4 w-4 text-indigo-500" />
-                      </button>
+                      {!isStudent && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSubject(s.id)}
+                          className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 border border-transparent hover:border-red-100"
+                          aria-label="Delete subject"
+                          title="Delete subject"
+                        >
+                          <Trash2 className="h-4 w-4 text-indigo-500" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="px-3 py-2">
@@ -663,15 +666,17 @@ export default function ContentsTab({
                                     {t.name}
                                   </span>
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTopic(t.id)}
-                                  className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 border border-transparent hover:border-red-100"
-                                  aria-label="Delete topic"
-                                  title="Delete topic"
-                                >
-                                  <Trash2 className="h-4 w-4 text-violet-400" />
-                                </button>
+                                {!isStudent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteTopic(t.id)}
+                                    className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 border border-transparent hover:border-red-100"
+                                    aria-label="Delete topic"
+                                    title="Delete topic"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-violet-400" />
+                                  </button>
+                                )}
                               </div>
                             </li>
                           );
@@ -764,15 +769,19 @@ export default function ContentsTab({
                                 <button onClick={() => handleOpenContent(c)} className="p-1.5 rounded-md bg-white/20 backdrop-blur-sm hover:bg-white/40 text-white transition-colors" title="View">
                                   <Eye className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => handleEditContent(c)} className="p-1.5 rounded-md bg-white/20 backdrop-blur-sm hover:bg-white/40 text-white transition-colors" title="Edit">
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
+                                {!isStudent && (
+                                  <button onClick={() => handleEditContent(c)} className="p-1.5 rounded-md bg-white/20 backdrop-blur-sm hover:bg-white/40 text-white transition-colors" title="Edit">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 <button onClick={() => handleDownloadContent(c)} className="p-1.5 rounded-md bg-white/20 backdrop-blur-sm hover:bg-white/40 text-white transition-colors" title="Download">
                                   <Download className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => handleDeleteContent(c.id)} className="p-1.5 rounded-md bg-red-500/40 backdrop-blur-sm hover:bg-red-500/70 text-white transition-colors ml-auto" title="Delete">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                                {!isStudent && (
+                                  <button onClick={() => handleDeleteContent(c.id)} className="p-1.5 rounded-md bg-red-500/40 backdrop-blur-sm hover:bg-red-500/70 text-white transition-colors ml-auto" title="Delete">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                             <div className="p-2.5">
@@ -808,9 +817,9 @@ export default function ContentsTab({
                                 <p className="text-xs text-slate-500 mt-0.5">MP4 Video</p>
                               </div>
                               <div className="flex items-center gap-1 ml-3 shrink-0">
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>
+                                {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>}
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDownloadContent(c)} title="Download"><Download className="h-4 w-4 text-slate-500" /></Button>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                                {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>}
                               </div>
                             </div>
                           </div>
@@ -855,8 +864,8 @@ export default function ContentsTab({
                                 </div>
                                 <div className="flex items-center gap-1 ml-3 shrink-0">
                                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleOpenContent(c)} title="View"><Eye className="h-4 w-4 text-slate-500" /></Button>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                                  {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>}
+                                  {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>}
                                 </div>
                               </div>
                             </div>
@@ -896,11 +905,11 @@ export default function ContentsTab({
                               </div>
                               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleOpenContent(c)} title="View"><Eye className="h-4 w-4 text-slate-500" /></Button>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>
+                                {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditContent(c)} title="Edit"><Pencil className="h-4 w-4 text-slate-500" /></Button>}
                                 {c.file_url && (
                                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDownloadContent(c)} title="Download"><Download className="h-4 w-4 text-slate-500" /></Button>
                                 )}
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                                {!isStudent && <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-red-600" onClick={() => handleDeleteContent(c.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>}
                               </div>
                             </div>
                           );
@@ -915,15 +924,17 @@ export default function ContentsTab({
         </div>
       </div>
       {/* Add Content Toggle */}
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          onClick={() => setShowForm((s) => !s)}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-        >
-          {showForm ? "Close" : "Add Content"}
-        </Button>
-      </div>
+      {!isStudent && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={() => setShowForm((s) => !s)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            {showForm ? "Close" : "Add Content"}
+          </Button>
+        </div>
+      )}
 
       {/* Upload Content Form (collapsible) */}
       <div

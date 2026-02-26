@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.subject import Subject
 from app.models.topic import Topic
 from app.models.faculty_subject import FacultySubject
 from app.models.course_content import CourseContent
+from app.models.user import User, Role
 from app.database import get_db
 from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectOut
+from app.utils.auth import get_current_user, require_role
 from app.utils.minio_client import delete_file_from_minio
 from typing import List
 
@@ -13,7 +16,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=SubjectOut)
-def create_subject(subject: SubjectCreate, db: Session = Depends(get_db)):
+def create_subject(subject: SubjectCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     db_subject = Subject(
         name=subject.name,
         code=subject.code,
@@ -39,9 +42,25 @@ def create_subject(subject: SubjectCreate, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/", response_model=List[SubjectOut])
-def get_subjects(db: Session = Depends(get_db)):
-    subjects = db.query(Subject).all()
+@router.get("/")
+def get_subjects(skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Subject)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            or_(
+                Subject.name.ilike(search_filter),
+                Subject.code.ilike(search_filter),
+            )
+        )
+
+    total = query.count()
+
+    if limit > 0:
+        query = query.offset(skip).limit(limit)
+
+    subjects = query.all()
     result = []
     for subject in subjects:
         faculty_ids = [assoc.faculty_id for assoc in db.query(
@@ -53,11 +72,11 @@ def get_subjects(db: Session = Depends(get_db)):
             faculty_ids=faculty_ids,
             topics=subject.topics
         ))
-    return result
+    return {"items": result, "total": total}
 
 
 @router.get("/{subject_id}", response_model=SubjectOut)
-def get_subject(subject_id: int, db: Session = Depends(get_db)):
+def get_subject(subject_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -75,7 +94,7 @@ def get_subject(subject_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{subject_id}", response_model=SubjectOut)
-def update_subject(subject_id: int, update: SubjectUpdate, db: Session = Depends(get_db)):
+def update_subject(subject_id: int, update: SubjectUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -108,7 +127,7 @@ def update_subject(subject_id: int, update: SubjectUpdate, db: Session = Depends
 
 
 @router.delete("/{subject_id}")
-def delete_subject(subject_id: int, db: Session = Depends(get_db)):
+def delete_subject(subject_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     """
     Delete a subject from the system entirely.
     This will also delete all its topics and course contents (including MinIO files).

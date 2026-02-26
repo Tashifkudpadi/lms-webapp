@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from app.models.user import User, Role
+from app.utils.auth import get_current_user, require_role
 from app.utils.minio_client import generate_presigned_url, BUCKET_NAME
 
 router = APIRouter()
 
 
 @router.get("/upload-url")
-def get_presigned_upload_url(file_name: str, content_type: str = None):
+def get_presigned_upload_url(file_name: str, content_type: str = None, current_user: User = Depends(require_role(Role.ADMIN, Role.FACULTY))):
     """
     Generate a presigned PUT URL for direct browser upload to MinIO.
 
@@ -25,7 +27,7 @@ def get_presigned_upload_url(file_name: str, content_type: str = None):
 
 
 @router.get("/download-url")
-def get_presigned_download_url(file_name: str):
+def get_presigned_download_url(file_name: str, current_user: User = Depends(get_current_user)):
     """
     Generate a presigned GET URL for direct browser download from MinIO.
     """

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import os
 
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, Role
 
 load_dotenv()
 
@@ -63,3 +63,17 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+
+# 🛡️ Role-based access control
+
+def require_role(*allowed_roles: Role):
+    """Returns a dependency that checks the current user has one of the allowed roles."""
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+        return current_user
+    return role_checker

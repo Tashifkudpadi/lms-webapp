@@ -1,6 +1,5 @@
-import { API_CONFIG } from "@/utils/config";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from "@/utils/axios";
 
 export interface User {
   id: number;
@@ -29,14 +28,8 @@ export const fetchUsers = createAsyncThunk(
   "users/fetchUsers",
   async (_, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${API_CONFIG.BASE_API}${API_CONFIG.USERS_API_URL}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      return response.data as User[];
+      const response = await axiosInstance.get("/users");
+      return response.data.items as User[];
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.detail || "Failed to fetch users"
@@ -60,17 +53,7 @@ export const addUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_CONFIG.BASE_API}${API_CONFIG.REGISTER_API_URL}`,
-        userData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axiosInstance.post("/auth/register", userData);
       // Transform response: register API returns first_name/last_name, but UI expects name
       const data = response.data;
       return {
@@ -112,17 +95,7 @@ export const updateUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${API_CONFIG.BASE_API}${API_CONFIG.USERS_API_URL}/${userId}`,
-        userData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axiosInstance.put(`/users/${userId}`, userData);
       return response.data as User;
     } catch (err: any) {
       return rejectWithValue(
@@ -140,13 +113,7 @@ export const deleteUser = createAsyncThunk(
   "users/deleteUser",
   async (userId: number, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(
-        `${API_CONFIG.BASE_API}${API_CONFIG.USERS_API_URL}/${userId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.delete(`/users/${userId}`);
       return userId;
     } catch (err: any) {
       return rejectWithValue(

@@ -1,7 +1,6 @@
 // store/batches.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { API_CONFIG } from "@/utils/config";
+import axiosInstance from "@/utils/axios";
 
 export interface Batch {
   id: number;
@@ -9,6 +8,7 @@ export interface Batch {
   start_date: string;
   end_date: string;
   num_learners: number;
+  faculty_ids: number[];
 }
 
 interface BatchState {
@@ -28,10 +28,8 @@ export const fetchBatches = createAsyncThunk(
   "batches/fetchBatches",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await axios.get(
-        `${API_CONFIG.BASE_API}${API_CONFIG.BATCHES_API_URL}`
-      );
-      return res.data as Batch[];
+      const res = await axiosInstance.get("/batches");
+      return res.data.items as Batch[];
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.detail || "Failed to fetch batches"
@@ -45,10 +43,7 @@ export const addBatch = createAsyncThunk(
   "batches/addBatch",
   async (batchData: Omit<Batch, "id">, { rejectWithValue }) => {
     try {
-      const res = await axios.post(
-        `${API_CONFIG.BASE_API}${API_CONFIG.BATCHES_API_URL}`,
-        batchData
-      );
+      const res = await axiosInstance.post("/batches", batchData);
       return res.data as Batch;
     } catch (err: any) {
       return rejectWithValue(
@@ -66,10 +61,7 @@ export const updateBatch = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res = await axios.put(
-        `${API_CONFIG.BASE_API}${API_CONFIG.BATCHES_API_URL}/${batchId}`,
-        batchData
-      );
+      const res = await axiosInstance.put(`/batches/${batchId}`, batchData);
       return res.data as Batch;
     } catch (err: any) {
       return rejectWithValue(
@@ -84,9 +76,7 @@ export const deleteBatch = createAsyncThunk(
   "batches/deleteBatch",
   async (batchId: number, { rejectWithValue }) => {
     try {
-      await axios.delete(
-        `${API_CONFIG.BASE_API}${API_CONFIG.BATCHES_API_URL}/${batchId}`
-      );
+      await axiosInstance.delete(`/batches/${batchId}`);
       return batchId;
     } catch (err: any) {
       return rejectWithValue(

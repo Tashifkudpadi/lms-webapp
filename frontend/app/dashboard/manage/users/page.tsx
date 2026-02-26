@@ -1,10 +1,9 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchUsers,
   addUser,
   updateUser,
   deleteUser,
@@ -45,17 +44,19 @@ import {
 } from "@/components/ui/select";
 import { MoreHorizontal, Search, UserPlus, Download } from "lucide-react";
 import { User } from "@/store/types";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
-  const { users, loading, error } = useAppSelector(
+  const { loading, error } = useAppSelector(
     (state) => state.userReducer
   );
+  const pagination = useServerPagination<any>("/users", 10);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editUserId, setEditUserId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -70,11 +71,6 @@ export default function UsersPage() {
     email: "",
     role: "",
   });
-
-  // Fetch users on mount
-  useEffect(() => {
-    dispatch(fetchUsers());
-  }, [dispatch]);
 
   // Handle form input changes for add user
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +96,7 @@ export default function UsersPage() {
       confirm_password: "",
     });
     setIsAddDialogOpen(false);
+    pagination.refetch();
   };
 
   // Handle edit user form submission
@@ -116,6 +113,7 @@ export default function UsersPage() {
     });
     setIsEditDialogOpen(false);
     setEditUserId(null);
+    pagination.refetch();
   };
 
   // Handle delete user
@@ -124,6 +122,7 @@ export default function UsersPage() {
     if (!ok) return;
     dispatch(clearError());
     await dispatch(deleteUser(userId));
+    pagination.refetch();
   };
 
   // Handle edit user click
@@ -137,13 +136,6 @@ export default function UsersPage() {
     });
     setIsEditDialogOpen(true);
   };
-
-  // Filter users based on search
-  const filteredUsers = users.filter(
-    (user) =>
-      user.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="space-y-6 p-6">
@@ -279,8 +271,8 @@ export default function UsersPage() {
             type="search"
             placeholder="Search users..."
             className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={pagination.search}
+            onChange={(e) => pagination.setSearch(e.target.value)}
           />
         </div>
       </div>
@@ -298,28 +290,22 @@ export default function UsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {pagination.loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : pagination.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-red-500">
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user: any, index) => (
+              pagination.items.map((user: any, index) => (
                 <TableRow key={user.id}>
-                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{pagination.startIndex + index}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span>{user.name}</span>
@@ -364,6 +350,7 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </div>
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="users" />
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>

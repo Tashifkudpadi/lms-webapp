@@ -42,7 +42,7 @@ export const fetchStudents = createAsyncThunk(
   async (_, { dispatch }) => {
     try {
       const response = await axiosInstance.get("/students");
-      dispatch(setStudents(response.data));
+      dispatch(setStudents(response.data.items));
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.detail || "Failed to fetch students";

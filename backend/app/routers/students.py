@@ -1,15 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.student import Student
+from app.models.user import User, Role
 from app.database import get_db
 from app.schemas.student import StudentCreate, StudentUpdate, StudentOut
+from app.utils.auth import get_current_user, require_role
 from typing import List
 
 router = APIRouter()
 
 
 @router.post("/", response_model=StudentOut)
-def create_student(student: StudentCreate, db: Session = Depends(get_db)):
+def create_student(student: StudentCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
+    existing = db.query(Student).filter(Student.email == student.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A student with this email already exists")
+
     db_student = Student(
         name=student.name,
         email=student.email,
@@ -31,23 +38,43 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/", response_model=List[StudentOut])
-def get_students(db: Session = Depends(get_db)):
-    students = db.query(Student).all()
-    return [
-        StudentOut(
-            id=s.id,
-            name=s.name,
-            email=s.email,
-            roll_number=s.roll_number,
-            mobile_number=s.mobile_number,
-            enrollment_date=s.enrollment_date,
-        ) for s in students
-    ]
+@router.get("/")
+def get_students(skip: int = 0, limit: int = 0, search: str = "", db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Student)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            or_(
+                Student.name.ilike(search_filter),
+                Student.email.ilike(search_filter),
+                Student.roll_number.ilike(search_filter),
+            )
+        )
+
+    total = query.count()
+
+    if limit > 0:
+        query = query.offset(skip).limit(limit)
+
+    students = query.all()
+    return {
+        "items": [
+            StudentOut(
+                id=s.id,
+                name=s.name,
+                email=s.email,
+                roll_number=s.roll_number,
+                mobile_number=s.mobile_number,
+                enrollment_date=s.enrollment_date,
+            ) for s in students
+        ],
+        "total": total,
+    }
 
 
 @router.get("/{student_id}", response_model=StudentOut)
-def get_student(student_id: int, db: Session = Depends(get_db)):
+def get_student(student_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -62,10 +89,15 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{student_id}", response_model=StudentOut)
-def update_student(student_id: int, update: StudentUpdate, db: Session = Depends(get_db)):
+def update_student(student_id: int, update: StudentUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+
+    if update.email != student.email:
+        existing = db.query(Student).filter(Student.email == update.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="A student with this email already exists")
 
     student.name = update.name
     student.email = update.email
@@ -86,7 +118,7 @@ def update_student(student_id: int, update: StudentUpdate, db: Session = Depends
 
 
 @router.delete("/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
+def delete_student(student_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(Role.ADMIN))):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")

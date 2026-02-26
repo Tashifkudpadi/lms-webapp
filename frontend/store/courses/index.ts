@@ -35,7 +35,7 @@ export const fetchCourses = createAsyncThunk("courses/fetchAll", async () => {
   const res = await axios.get(
     `${API_CONFIG.BASE_API}${API_CONFIG.COURSES_API_URL}`
   );
-  return res.data;
+  return res.data.items;
 });
 
 export const createCourse = createAsyncThunk(
@@ -113,7 +113,7 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCourses.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = action.payload;
+        state.list = action.payload || [];
         state.error = null;
         state.hasFetched = true;
       })

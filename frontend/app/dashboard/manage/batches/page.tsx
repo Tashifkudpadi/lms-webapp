@@ -4,7 +4,6 @@ import { useConfirm } from "@/components/confirm-dialog-provider";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchBatches,
   addBatch,
   updateBatch,
   deleteBatch,
@@ -31,13 +30,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { useServerPagination } from "@/hooks/use-server-pagination";
+import { PaginationControls } from "@/components/pagination-controls";
 
 export default function BatchesPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
-  const { batches, loading, error } = useAppSelector(
+  const { loading, error } = useAppSelector(
     (state) => state.batchesReducer
   );
+  const pagination = useServerPagination<any>("/batches", 10);
   const { students } = useAppSelector((state) => state.studentsReducer);
   const { faculty } = useAppSelector((state) => state.facultyReducer);
 
@@ -54,7 +56,6 @@ export default function BatchesPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchBatches());
     dispatch(fetchStudents());
     dispatch(fetchFaculties());
   }, [dispatch]);
@@ -93,6 +94,7 @@ export default function BatchesPage() {
     });
     setEditId(null);
     setIsDialogOpen(false);
+    pagination.refetch();
   };
 
   const handleEdit = (batch: any) => {
@@ -105,6 +107,7 @@ export default function BatchesPage() {
     const ok = await confirm({ title: "Delete Batch", description: "Are you sure you want to delete this batch?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
       await dispatch(deleteBatch(id));
+      pagination.refetch();
     }
   };
 
@@ -218,9 +221,9 @@ export default function BatchesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {batches.map((batch, index) => (
+            {pagination.items.map((batch: any, index: number) => (
               <TableRow key={batch.id}>
-                <TableCell>{index + 1}</TableCell>
+                <TableCell>{pagination.startIndex + index}</TableCell>
                 <TableCell>
                   <button
                     className="text-blue-600 hover:underline"
@@ -253,6 +256,7 @@ export default function BatchesPage() {
           </TableBody>
         </Table>
       </div>
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} totalItems={pagination.totalItems} startIndex={pagination.startIndex} endIndex={pagination.endIndex} onPageChange={pagination.setCurrentPage} itemLabel="batches" />
 
       {/* Learners dialog for a selected batch */}
       <Dialog

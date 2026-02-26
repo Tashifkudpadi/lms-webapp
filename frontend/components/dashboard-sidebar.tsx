@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   GraduationCap,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,12 @@ export default function DashboardSidebar() {
       name: "Tests",
       href: "/dashboard/tests",
       icon: ClipboardList,
+      roles: ["admin", "faculty", "student"],
+    },
+    {
+      name: "Classes",
+      href: "/dashboard/classes",
+      icon: Video,
       roles: ["admin", "faculty", "student"],
     },
     {
