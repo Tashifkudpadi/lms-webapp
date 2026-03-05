@@ -2,6 +2,7 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -49,6 +50,7 @@ interface Subject {
 export default function SubjectsPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { error } = useAppSelector((state) => state.subjectsReducer);
   const { faculty } = useAppSelector((state) => state.facultyReducer);
   const pagination = useServerPagination<any>("/subjects", 10);
@@ -80,34 +82,49 @@ export default function SubjectsPage() {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(addSubject(formData));
-    setFormData({
-      name: "",
-      code: "",
-      faculty_ids: [],
-    });
-    setIsAddDialogOpen(false);
-    pagination.refetch();
+    const result = await dispatch(addSubject(formData));
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Subject added", variant: "success" });
+      setFormData({
+        name: "",
+        code: "",
+        faculty_ids: [],
+      });
+      setIsAddDialogOpen(false);
+      pagination.refetch();
+    } else {
+      toast({ title: "Failed to add subject", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
+    }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editId) return;
-    await dispatch(
+    const result = await dispatch(
       updateSubject({
         subjectId: editId,
         subjectData: formData,
       })
     );
-    setEditId(null);
-    setIsEditDialogOpen(false);
-    pagination.refetch();
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Subject updated", variant: "success" });
+      setEditId(null);
+      setIsEditDialogOpen(false);
+      pagination.refetch();
+    } else {
+      toast({ title: "Failed to update subject", variant: "destructive" });
+    }
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Subject", description: "Are you sure you want to delete this subject?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      await dispatch(deleteSubject(id));
+      const result = await dispatch(deleteSubject(id));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({ title: "Subject deleted", variant: "success" });
+      } else {
+        toast({ title: "Failed to delete subject", variant: "destructive" });
+      }
       pagination.refetch();
     }
   };

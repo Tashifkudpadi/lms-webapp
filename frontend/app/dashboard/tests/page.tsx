@@ -61,6 +61,7 @@ import { fetchFaculties } from "@/store/faculties";
 import { fetchSubjects } from "@/store/subjects";
 import { useServerPagination } from "@/hooks/use-server-pagination";
 import { PaginationControls } from "@/components/pagination-controls";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TestsPageWrapper() {
   return (
@@ -72,6 +73,7 @@ export default function TestsPageWrapper() {
 
 function TestsPage() {
   const confirm = useConfirm();
+  const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
   const searchParams = useSearchParams();
   const preselectedCourseId = searchParams.get("createForCourse");
@@ -232,8 +234,9 @@ function TestsPage() {
         course_ids: [],
       });
       testsPagination.refetch();
-    } catch (err) {
-      console.error("Failed to create test:", err);
+      toast({ title: "Test created successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to create test", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -246,8 +249,9 @@ function TestsPage() {
         description: "",
         exam_type: selectedExamType || ExamType.UPSC,
       });
-    } catch (err) {
-      console.error("Failed to create sub-category:", err);
+      toast({ title: "Sub-category created successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to create sub-category", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -257,8 +261,9 @@ function TestsPage() {
       try {
         await dispatch(deleteTest(testId)).unwrap();
         testsPagination.refetch();
-      } catch (err) {
-        console.error("Failed to delete test:", err);
+        toast({ title: "Test deleted successfully", variant: "success" });
+      } catch (err: any) {
+        toast({ title: "Failed to delete test", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
       }
     }
   };
@@ -1406,14 +1411,20 @@ function TestCard({
             <span className="text-xs text-slate-500">Score</span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-800">
-                {test.attempt_score}/{test.total_marks}
+                {test.pass_mark_unit === "percentage"
+                  ? `${test.attempt_percentage?.toFixed(1)}%`
+                  : `${test.attempt_score}/${test.total_marks}`}
               </span>
               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                test.attempt_score >= (test.passing_marks ?? 0)
+                (test.pass_mark_unit === "percentage"
+                  ? (test.attempt_percentage ?? 0) >= (test.passing_marks ?? 0)
+                  : test.attempt_score >= (test.passing_marks ?? 0))
                   ? "bg-emerald-100 text-emerald-700"
                   : "bg-red-100 text-red-700"
               }`}>
-                {test.attempt_score >= (test.passing_marks ?? 0) ? "PASS" : "FAIL"}
+                {(test.pass_mark_unit === "percentage"
+                  ? (test.attempt_percentage ?? 0) >= (test.passing_marks ?? 0)
+                  : test.attempt_score >= (test.passing_marks ?? 0)) ? "PASS" : "FAIL"}
               </span>
             </div>
           </div>

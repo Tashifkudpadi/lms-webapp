@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, users, students, faculties, subjects, topics, batches, courses, course_content, tests, course_content_presigned, zoom_classes
+from app.routers import auth, users, students, faculties, subjects, topics, batches, courses, course_content, tests, course_content_presigned, zoom_classes, notifications, messages
 from app.database import Base, engine
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -46,6 +46,8 @@ app.include_router(tests.router, prefix="/tests", tags=["Tests"])
 app.include_router(course_content_presigned.router,
                    prefix="/course-contents", tags=["CourseContents"])
 app.include_router(zoom_classes.router, prefix="/zoom-classes", tags=["ZoomClasses"])
+app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 
 
 @app.get("/")

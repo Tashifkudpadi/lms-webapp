@@ -20,6 +20,8 @@ from app.models.subject import Subject
 from app.models.topic import Topic
 from app.models.user import User, Role
 from app.utils.auth import get_current_user, require_role
+from app.utils.notifications import create_notification, create_notifications_for_students, create_notifications_for_faculty
+from app.models.notification import NotificationTypeEnum
 from app.schemas.test import (
     TestCreate, TestUpdate, TestOut, TestListOut, TestPreview,
     TestSubCategoryCreate, TestSubCategoryUpdate, TestSubCategoryOut,
@@ -50,6 +52,7 @@ def build_test_out(test: Test) -> TestOut:
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
         passing_marks=test.passing_marks,
+        pass_mark_unit=test.pass_mark_unit or "percentage",
         negative_marking=test.negative_marking,
         start_datetime=test.start_datetime,
         end_datetime=test.end_datetime,
@@ -89,6 +92,7 @@ def build_test_list_out(test: Test) -> TestListOut:
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
         passing_marks=test.passing_marks or 0,
+        pass_mark_unit=test.pass_mark_unit or "percentage",
         question_count=len(test.questions),
         start_datetime=test.start_datetime,
         end_datetime=test.end_datetime,
@@ -464,6 +468,7 @@ def create_test(test: TestCreate, db: Session = Depends(get_db), current_user: U
         duration_minutes=test.duration_minutes,
         total_marks=test.total_marks,
         passing_marks=test.passing_marks,
+        pass_mark_unit=test.pass_mark_unit,
         negative_marking=test.negative_marking,
         start_datetime=test.start_datetime,
         end_datetime=test.end_datetime,
@@ -521,6 +526,8 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db),
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
 
+    original_status = test.status
+
     # Update fields
     if update.test_name is not None:
         test.test_name = update.test_name
@@ -555,6 +562,8 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db),
         test.total_marks = update.total_marks
     if update.passing_marks is not None:
         test.passing_marks = update.passing_marks
+    if update.pass_mark_unit is not None:
+        test.pass_mark_unit = update.pass_mark_unit
     if update.negative_marking is not None:
         test.negative_marking = update.negative_marking
     if update.start_datetime is not None:
@@ -579,6 +588,40 @@ def update_test(test_id: int, update: TestUpdate, db: Session = Depends(get_db),
         test.batches = db.query(Batch).filter(Batch.id.in_(update.batch_ids)).all()
     if update.course_ids is not None:
         test.courses = db.query(Course).filter(Course.id.in_(update.course_ids)).all()
+
+    # Notify when test is published
+    if test.status == TestStatusEnum.PUBLISHED and original_status != TestStatusEnum.PUBLISHED:
+        student_emails = [s.email for s in test.students]
+        for batch in test.batches:
+            student_emails.extend([s.email for s in batch.students])
+        student_emails = list(set(student_emails))
+
+        expiry_msg = ""
+        if test.end_datetime:
+            expiry_msg = f" Deadline: {test.end_datetime.strftime('%b %d, %Y %I:%M %p')}."
+
+        create_notifications_for_students(
+            db, student_emails, NotificationTypeEnum.TEST_ASSIGNED,
+            f"New test: {test.test_name}",
+            f"A new test '{test.test_name}' has been assigned to you.{expiry_msg}",
+            test_id=test.id,
+        )
+
+        if test.end_datetime:
+            create_notifications_for_students(
+                db, student_emails, NotificationTypeEnum.TEST_EXPIRY,
+                f"Test deadline: {test.test_name}",
+                f"The test '{test.test_name}' expires on {test.end_datetime.strftime('%b %d, %Y %I:%M %p')}.",
+                test_id=test.id,
+            )
+
+        faculty_emails = [f.email for f in test.faculties]
+        create_notifications_for_faculty(
+            db, faculty_emails, NotificationTypeEnum.TEST_ASSIGNED,
+            f"Test published: {test.test_name}",
+            f"The test '{test.test_name}' has been published.",
+            test_id=test.id,
+        )
 
     db.commit()
     db.refresh(test)
@@ -1109,6 +1152,16 @@ def submit_test_attempt(
             attempt.answer_file_url = data.answer_file_url
             attempt.answer_file_name = data.answer_file_name
 
+    # Notify faculty about submission
+    student = db.query(Student).filter(Student.id == attempt.student_id).first()
+    faculty_emails = [f.email for f in test.faculties]
+    create_notifications_for_faculty(
+        db, faculty_emails, NotificationTypeEnum.TEST_SUBMITTED,
+        f"Test submitted: {test.test_name}",
+        f"Student '{student.name}' has submitted the test '{test.test_name}'.",
+        test_id=test.id,
+    )
+
     db.commit()
     db.refresh(attempt)
 
@@ -1306,6 +1359,18 @@ def evaluate_mains_attempt(
     attempt.evaluated_at = datetime.now(timezone.utc)
     attempt.status = AttemptStatusEnum.EVALUATED
 
+    # Notify student about evaluation
+    student = db.query(Student).filter(Student.id == attempt.student_id).first()
+    if student:
+        user = db.query(User).filter(User.email == student.email).first()
+        if user:
+            create_notification(
+                db, user.id, NotificationTypeEnum.TEST_EVALUATED,
+                f"Test evaluated: {test.test_name}",
+                f"Your test '{test.test_name}' has been evaluated. Score: {data.score}/{test.total_marks}",
+                test_id=test.id,
+            )
+
     db.commit()
     db.refresh(attempt)
 
@@ -1356,8 +1421,13 @@ def get_test_statistics(test_id: int, db: Session = Depends(get_db), current_use
     pass_count = 0
     fail_count = 0
     if test.passing_marks:
-        pass_count = len([s for s in scores if s >= test.passing_marks])
-        fail_count = len([s for s in scores if s < test.passing_marks])
+        if test.pass_mark_unit == "percentage":
+            percentages = [a.percentage for a in attempts if a.percentage is not None]
+            pass_count = len([p for p in percentages if p >= test.passing_marks])
+            fail_count = len([p for p in percentages if p < test.passing_marks])
+        else:
+            pass_count = len([s for s in scores if s >= test.passing_marks])
+            fail_count = len([s for s in scores if s < test.passing_marks])
 
     return TestStatistics(
         test_id=test.id,

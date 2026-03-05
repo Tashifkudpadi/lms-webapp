@@ -81,6 +81,7 @@ export interface Test {
   duration_minutes?: number;
   total_marks: number;
   passing_marks?: number;
+  pass_mark_unit: string;
   negative_marking: number;
   start_datetime?: string;
   end_datetime?: string;
@@ -110,6 +111,7 @@ export interface TestListItem {
   duration_minutes?: number;
   total_marks: number;
   passing_marks?: number;
+  pass_mark_unit?: string;
   question_count: number;
   start_datetime?: string;
   end_datetime?: string;

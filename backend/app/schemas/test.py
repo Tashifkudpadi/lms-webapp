@@ -138,6 +138,7 @@ class TestBase(BaseModel):
     duration_minutes: Optional[int] = None
     total_marks: float = 0
     passing_marks: Optional[float] = None
+    pass_mark_unit: str = "percentage"
     negative_marking: float = 0
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None
@@ -165,6 +166,7 @@ class TestUpdate(BaseModel):
     duration_minutes: Optional[int] = None
     total_marks: Optional[float] = None
     passing_marks: Optional[float] = None
+    pass_mark_unit: Optional[str] = None
     negative_marking: Optional[float] = None
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None
@@ -210,6 +212,7 @@ class TestListOut(BaseModel):
     duration_minutes: Optional[int] = None
     total_marks: float
     passing_marks: float = 0
+    pass_mark_unit: str = "percentage"
     question_count: int = 0
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None

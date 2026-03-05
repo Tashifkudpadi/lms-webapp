@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useConfirm } from "@/components/confirm-dialog-provider";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -93,6 +93,8 @@ export default function TestDetailPage() {
   const { toast } = useToast();
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const courseId = searchParams.get("courseId");
   const dispatch = useDispatch<AppDispatch>();
   const testId = Number(params.id);
 
@@ -233,7 +235,7 @@ export default function TestDetailPage() {
       // Initialize grading settings
       setGradingSettings({
         pass_mark_value: test.passing_marks || 0,
-        pass_mark_unit: "percentage",
+        pass_mark_unit: (test.pass_mark_unit as "percentage" | "grade" | "point") || "percentage",
       });
       // Sync shuffle state (skip if user just toggled it)
       if (!shuffleToggledRef.current) {
@@ -274,8 +276,9 @@ export default function TestDetailPage() {
       });
       dispatch(fetchQuestions(testId));
       dispatch(fetchTestById(testId));
-    } catch (err) {
-      console.error("Failed to add question:", err);
+      toast({ title: "Question added successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to add question", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -290,8 +293,9 @@ export default function TestDetailPage() {
       try {
         await dispatch(deleteQuestion({ testId, questionId })).unwrap();
         dispatch(fetchTestById(testId));
-      } catch (err) {
-        console.error("Failed to delete question:", err);
+        toast({ title: "Question deleted", variant: "success" });
+      } catch (err: any) {
+        toast({ title: "Failed to delete question", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
       }
     }
   };
@@ -304,8 +308,9 @@ export default function TestDetailPage() {
       setImportFile(null);
       dispatch(fetchQuestions(testId));
       dispatch(fetchTestById(testId));
-    } catch (err) {
-      console.error("Failed to import questions:", err);
+      toast({ title: "Questions imported successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to import questions", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -326,8 +331,9 @@ export default function TestDetailPage() {
       setShowUploadPdf(false);
       setPdfFile(null);
       dispatch(fetchTestById(testId));
-    } catch (err) {
-      console.error("Failed to upload PDF:", err);
+      toast({ title: "PDF uploaded successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to upload PDF", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -356,8 +362,9 @@ export default function TestDetailPage() {
         }),
       ).unwrap();
       setEditMode(false);
-    } catch (err) {
-      console.error("Failed to update test:", err);
+      toast({ title: "Test settings saved", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to save test settings", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -409,10 +416,11 @@ export default function TestDetailPage() {
             data: { status: TestStatus.PUBLISHED },
           }),
         ).unwrap();
+        toast({ title: "Test published successfully", variant: "success" });
       } catch (err: any) {
         const msg =
-          err?.message ||
           err?.response?.data?.detail ||
+          err?.message ||
           "Failed to publish test";
         toast({
           title: "Publish failed",
@@ -438,8 +446,9 @@ export default function TestDetailPage() {
             data: { status: TestStatus.ARCHIVED },
           }),
         ).unwrap();
-      } catch (err) {
-        console.error("Failed to archive test:", err);
+        toast({ title: "Test archived", variant: "success" });
+      } catch (err: any) {
+        toast({ title: "Failed to archive test", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
       }
     }
   };
@@ -494,11 +503,11 @@ export default function TestDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/dashboard/tests")}
+            onClick={() => router.push(courseId ? `/dashboard/courses/${courseId}` : "/dashboard/tests")}
             className="mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Tests
+            {courseId ? "Back to Course" : "Back to Tests"}
           </Button>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">
@@ -1334,15 +1343,20 @@ export default function TestDetailPage() {
                     <Switch
                       id="shuffle-questions"
                       checked={shuffleEnabled}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={async (checked) => {
                         shuffleToggledRef.current = true;
                         setShuffleEnabled(checked);
-                        dispatch(
-                          updateTest({
-                            id: testId,
-                            data: { shuffle_questions: checked },
-                          }),
-                        );
+                        try {
+                          await dispatch(
+                            updateTest({
+                              id: testId,
+                              data: { shuffle_questions: checked },
+                            }),
+                          ).unwrap();
+                          toast({ title: checked ? "Shuffle enabled" : "Shuffle disabled", variant: "success" });
+                        } catch (err: any) {
+                          toast({ title: "Failed to update shuffle", variant: "destructive" });
+                        }
                       }}
                     />
                     <Label
@@ -1822,7 +1836,31 @@ export default function TestDetailPage() {
                   </div>
                 </div>
 
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                <Button
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  onClick={async () => {
+                    try {
+                      await dispatch(
+                        updateTest({
+                          id: testId,
+                          data: {
+                            passing_marks: gradingSettings.pass_mark_value,
+                            pass_mark_unit: gradingSettings.pass_mark_unit,
+                          } as any,
+                        }),
+                      ).unwrap();
+                      toast({
+                        title: "Grading settings saved",
+                        description: `Pass mark: ${gradingSettings.pass_mark_value} ${gradingSettings.pass_mark_unit}`,
+                      });
+                    } catch {
+                      toast({
+                        title: "Failed to save grading settings",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
                   <Save className="w-4 h-4 mr-2" />
                   Save Grading Settings
                 </Button>
@@ -1908,7 +1946,9 @@ export default function TestDetailPage() {
                                 {isEvaluated &&
                                 student.score !== null &&
                                 student.score !== undefined
-                                  ? `${student.score}/${test.total_marks}`
+                                  ? test.pass_mark_unit === "percentage"
+                                    ? `${student.percentage?.toFixed(1)}%`
+                                    : `${student.score}/${test.total_marks}`
                                   : "-"}
                               </td>
                             )}
@@ -1917,7 +1957,9 @@ export default function TestDetailPage() {
                                 {isEvaluated &&
                                 student.score !== null &&
                                 student.score !== undefined ? (
-                                  student.score >= (test.passing_marks || 0) ? (
+                                  (test.pass_mark_unit === "percentage"
+                                    ? (student.percentage ?? 0) >= (test.passing_marks || 0)
+                                    : student.score >= (test.passing_marks || 0)) ? (
                                     <Badge className="bg-green-500">Pass</Badge>
                                   ) : (
                                     <Badge variant="destructive">Fail</Badge>

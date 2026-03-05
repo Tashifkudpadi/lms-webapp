@@ -207,14 +207,16 @@ export default function CreateCourseForm({ children, onSuccess }: CreateCourseFo
 
       setIsLoading(false);
       setOpen(false);
+      toast({ title: "Course created successfully", variant: "success" });
       onSuccess?.();
       setSelectedSubjects([]);
       setSelectedBatches([]);
       setSelectedFaculties([]);
       setSelectedStudents([]);
       setCourseImage("");
-    } catch (err) {
+    } catch (err: any) {
       setIsLoading(false);
+      toast({ title: "Failed to create course", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 

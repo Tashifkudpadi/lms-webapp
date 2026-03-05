@@ -44,6 +44,7 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState<string>("");
+  const [roleError, setRoleError] = useState(false);
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector((state) => state.authReducer);
 
@@ -75,6 +76,12 @@ export default function AuthForm() {
     type: "signin" | "signup"
   ) {
     event.preventDefault();
+
+    setRoleError(false);
+    if (!role) {
+      setRoleError(true);
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const data: any = {
@@ -255,12 +262,12 @@ export default function AuthForm() {
                     <div className="space-y-2">
                       <Label htmlFor="signin-role">Role</Label>
                       <Select
-                        onValueChange={setRole}
+                        onValueChange={(v) => { setRole(v); setRoleError(false); }}
                         value={role}
                         name="role"
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={roleError ? "border-red-500" : ""}>
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -269,6 +276,7 @@ export default function AuthForm() {
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                      {roleError && <p className="text-red-500 text-xs">Please select a role</p>}
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -378,12 +386,12 @@ export default function AuthForm() {
                     <div className="space-y-2">
                       <Label htmlFor="role">Role</Label>
                       <Select
-                        onValueChange={setRole}
+                        onValueChange={(v) => { setRole(v); setRoleError(false); }}
                         value={role}
                         name="role"
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={roleError ? "border-red-500" : ""}>
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -392,6 +400,7 @@ export default function AuthForm() {
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                      {roleError && <p className="text-red-500 text-xs">Please select a role</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-password">Password</Label>

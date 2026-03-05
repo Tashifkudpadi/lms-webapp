@@ -93,6 +93,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
       await axiosInstance.delete(
         `/courses/${courseId}/learners/${learner.id}${params}`
       );
+      toast({ title: "Learner removed", variant: "success" });
       pagination.refetch();
     } catch (e: any) {
       toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove learner", variant: "destructive" });
@@ -104,11 +105,12 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
     setAddingStudent(true);
     try {
       await axiosInstance.post(`/courses/${courseId}/learners/${student.id}`);
+      toast({ title: "Learner added", variant: "success" });
       pagination.refetch();
       setShowAddDialog(false);
       setStudentSearchQuery("");
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "Failed to add student");
+      toast({ title: "Failed to add learner", description: e?.response?.data?.detail || "Something went wrong", variant: "destructive" });
     } finally {
       setAddingStudent(false);
     }

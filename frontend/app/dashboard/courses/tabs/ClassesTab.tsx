@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addZoomClass, deleteZoomClass } from "@/store/zoomClasses";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ type FacultyOption = { id: number; name: string };
 export default function ClassesTab({ courseId }: { courseId: string | number }) {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { error } = useAppSelector((state) => state.zoomClassesReducer);
   const { user } = useAppSelector((state) => state.authReducer);
   const isAdmin = user?.role === "admin";
@@ -119,9 +121,12 @@ export default function ClassesTab({ courseId }: { courseId: string | number }) 
     };
     const result = await dispatch(addZoomClass(payload));
     if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Class created", variant: "success" });
       resetForm();
       setShowAddDialog(false);
       pagination.refetch();
+    } else {
+      toast({ title: "Failed to create class", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -133,7 +138,12 @@ export default function ClassesTab({ courseId }: { courseId: string | number }) 
       variant: "destructive",
     });
     if (ok) {
-      await dispatch(deleteZoomClass(id));
+      const result = await dispatch(deleteZoomClass(id));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({ title: "Class deleted", variant: "success" });
+      } else {
+        toast({ title: "Failed to delete class", variant: "destructive" });
+      }
       pagination.refetch();
     }
   };

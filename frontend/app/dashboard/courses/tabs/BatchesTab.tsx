@@ -80,6 +80,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
 
     try {
       await axiosInstance.delete(`/courses/${courseId}/batches/${batch.id}`);
+      toast({ title: "Batch removed", variant: "success" });
       pagination.refetch();
     } catch (e: any) {
       toast({ title: "Error", description: e?.response?.data?.detail || "Failed to remove batch", variant: "destructive" });
@@ -91,11 +92,12 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
     setAddingBatch(true);
     try {
       await axiosInstance.post(`/courses/${courseId}/batches/${batch.id}`);
+      toast({ title: "Batch added", variant: "success" });
       pagination.refetch();
       setShowAddDialog(false);
       setBatchSearchQuery("");
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "Failed to add batch");
+      toast({ title: "Failed to add batch", description: e?.response?.data?.detail || "Something went wrong", variant: "destructive" });
     } finally {
       setAddingBatch(false);
     }

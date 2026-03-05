@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -50,6 +51,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 export default function UsersPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { loading, error } = useAppSelector(
     (state) => state.userReducer
   );
@@ -86,17 +88,22 @@ export default function UsersPage() {
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     dispatch(clearError());
-    await dispatch(addUser(formData));
-    setFormData({
-      first_name: "",
-      last_name: "",
-      email: "",
-      role: "",
-      password: "",
-      confirm_password: "",
-    });
-    setIsAddDialogOpen(false);
-    pagination.refetch();
+    const result = await dispatch(addUser(formData));
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "User added", variant: "success" });
+      setFormData({
+        first_name: "",
+        last_name: "",
+        email: "",
+        role: "",
+        password: "",
+        confirm_password: "",
+      });
+      setIsAddDialogOpen(false);
+      pagination.refetch();
+    } else {
+      toast({ title: "Failed to add user", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
+    }
   };
 
   // Handle edit user form submission
@@ -104,16 +111,21 @@ export default function UsersPage() {
     e.preventDefault();
     if (!editUserId) return;
     dispatch(clearError());
-    await dispatch(updateUser({ userId: editUserId, userData: editFormData }));
-    setEditFormData({
-      first_name: "",
-      last_name: "",
-      email: "",
-      role: "",
-    });
-    setIsEditDialogOpen(false);
-    setEditUserId(null);
-    pagination.refetch();
+    const result = await dispatch(updateUser({ userId: editUserId, userData: editFormData }));
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "User updated", variant: "success" });
+      setEditFormData({
+        first_name: "",
+        last_name: "",
+        email: "",
+        role: "",
+      });
+      setIsEditDialogOpen(false);
+      setEditUserId(null);
+      pagination.refetch();
+    } else {
+      toast({ title: "Failed to update user", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
+    }
   };
 
   // Handle delete user
@@ -121,7 +133,12 @@ export default function UsersPage() {
     const ok = await confirm({ title: "Delete User", description: "Are you sure you want to delete this user?", confirmLabel: "Delete", variant: "destructive" });
     if (!ok) return;
     dispatch(clearError());
-    await dispatch(deleteUser(userId));
+    const result = await dispatch(deleteUser(userId));
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "User deleted", variant: "success" });
+    } else {
+      toast({ title: "Failed to delete user", variant: "destructive" });
+    }
     pagination.refetch();
   };
 

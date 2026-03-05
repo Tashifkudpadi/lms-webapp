@@ -136,8 +136,9 @@ export default function SettingsTab({ courseId, course, selected }: SettingsTabP
     };
     try {
       await dispatch(updateCourse({ id: courseId, payload })).unwrap();
-    } catch (err) {
-      // store handles error
+      toast({ title: "Course updated successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to update course", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -146,9 +147,10 @@ export default function SettingsTab({ courseId, course, selected }: SettingsTabP
     if (!ok) return;
     try {
       await dispatch(deleteCourse(courseId)).unwrap();
+      toast({ title: "Course deleted", variant: "success" });
       router.push("/dashboard");
-    } catch (err) {
-      // store handles error
+    } catch (err: any) {
+      toast({ title: "Failed to delete course", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 

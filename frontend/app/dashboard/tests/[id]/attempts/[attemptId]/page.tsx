@@ -77,7 +77,7 @@ export default function AttemptReviewPage() {
       );
       // Refresh attempt review
       dispatch(fetchAttemptReview({ testId, attemptId }));
-      toast({ title: "Success", description: "Evaluation submitted successfully!" });
+      toast({ title: "Evaluation submitted successfully", variant: "success" });
     } catch (error: any) {
       console.error("Failed to evaluate:", error);
       toast({ title: "Evaluation failed", description: error.response?.data?.detail || "Failed to submit evaluation", variant: "destructive" });
@@ -104,7 +104,9 @@ export default function AttemptReviewPage() {
     isEvaluated &&
     attemptReview.score !== null &&
     attemptReview.score !== undefined &&
-    attemptReview.score >= (test.passing_marks || 0);
+    (test.pass_mark_unit === "percentage"
+      ? (attemptReview.percentage ?? 0) >= (test.passing_marks || 0)
+      : attemptReview.score >= (test.passing_marks || 0));
 
   // Create a map of answers by question_id
   const answersMap = new Map(
@@ -202,7 +204,9 @@ export default function AttemptReviewPage() {
                 <p className="text-sm text-muted-foreground">Score</p>
                 <p className="text-lg font-bold">
                   {isEvaluated && attemptReview.score !== null
-                    ? `${attemptReview.score}/${test.total_marks}`
+                    ? test.pass_mark_unit === "percentage"
+                      ? `${attemptReview.percentage?.toFixed(1)}%`
+                      : `${attemptReview.score}/${test.total_marks}`
                     : "-"}
                 </p>
                 {isEvaluated && (

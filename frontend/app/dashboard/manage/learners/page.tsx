@@ -3,6 +3,7 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -42,6 +43,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 export default function LearnersPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { error } = useAppSelector((state) => state.studentsReducer);
   const pagination = useServerPagination<any>("/students", 10);
 
@@ -68,6 +70,7 @@ export default function LearnersPage() {
     };
     const result = await dispatch(addStudent(payload));
     if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Student added", variant: "success" });
       setFormData({
         name: "",
         email: "",
@@ -77,6 +80,8 @@ export default function LearnersPage() {
       });
       setIsAddDialogOpen(false);
       pagination.refetch();
+    } else {
+      toast({ title: "Failed to add student", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -89,16 +94,24 @@ export default function LearnersPage() {
     };
     const result = await dispatch(updateStudent({ studentId: editId, studentData: payload }));
     if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Student updated", variant: "success" });
       setEditId(null);
       setIsEditDialogOpen(false);
       pagination.refetch();
+    } else {
+      toast({ title: "Failed to update student", variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Student", description: "Are you sure you want to delete this student?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      await dispatch(deleteStudent(id));
+      const result = await dispatch(deleteStudent(id));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({ title: "Student deleted", variant: "success" });
+      } else {
+        toast({ title: "Failed to delete student", variant: "destructive" });
+      }
       pagination.refetch();
     }
   };

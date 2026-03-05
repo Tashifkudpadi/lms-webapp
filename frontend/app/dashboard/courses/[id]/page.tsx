@@ -40,6 +40,7 @@ import TestsTab from "@/app/dashboard/courses/tabs/TestsTab";
 import AssignmentsTab from "@/app/dashboard/courses/tabs/AssignmentsTab";
 import ClassesTab from "@/app/dashboard/courses/tabs/ClassesTab";
 import SettingsTab from "@/app/dashboard/courses/tabs/SettingsTab";
+import MessageInstructorDialog from "@/components/message-instructor-dialog";
 
 export default function ViewCoursePage({
   params,
@@ -74,14 +75,7 @@ export default function ViewCoursePage({
         title: c.instructor_title ?? c.instructor?.title ?? "",
         avatar:
           c.instructor_avatar ?? c.instructor?.avatar ?? "/placeholder.svg",
-        rating: c.instructor_rating ?? c.instructor?.rating ?? "",
-        students: c.instructor_students ?? c.instructor?.students ?? "",
       },
-      students: c.students ?? "",
-      startDate: c.start_date ?? c.created_at ?? "",
-      totalContents: c.total_contents ?? "",
-      totalAssignments: c.total_assignments ?? "",
-      totalTests: c.total_tests ?? "",
     };
   }, [selected, id]);
 
@@ -213,28 +207,27 @@ export default function ViewCoursePage({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
-                    {course.totalContents}
-                  </div>
-                  <div className="text-sm text-blue-100">Contents</div>
-                </div>
-
-                <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <div className="text-2xl font-bold text-white">
-                    {course.students}
+                    {(selected as any)?.student_ids?.length ?? 0}
                   </div>
                   <div className="text-sm text-blue-100">Students</div>
                 </div>
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
-                    {course.totalTests}
+                    {(selected as any)?.batch_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Tests</div>
+                  <div className="text-sm text-blue-100">Batches</div>
                 </div>
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
-                    {course.totalAssignments}
+                    {(selected as any)?.subject_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Assignments</div>
+                  <div className="text-sm text-blue-100">Subjects</div>
+                </div>
+                <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <div className="text-2xl font-bold text-white">
+                    {(selected as any)?.topic_ids?.length ?? 0}
+                  </div>
+                  <div className="text-sm text-blue-100">Topics</div>
                 </div>
               </div>
             </div>
@@ -260,10 +253,14 @@ export default function ViewCoursePage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Message Instructor
-                  </Button>
+                  {isStudent ? (
+                    <MessageInstructorDialog courseId={Number(id)} />
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Message Instructor
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>

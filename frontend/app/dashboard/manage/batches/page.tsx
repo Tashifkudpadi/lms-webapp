@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -36,6 +37,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 export default function BatchesPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { loading, error } = useAppSelector(
     (state) => state.batchesReducer
   );
@@ -80,21 +82,24 @@ export default function BatchesPage() {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     dispatch(clearBatchError());
-    if (editId) {
-      await dispatch(updateBatch({ batchId: editId, batchData: formData }));
+    const result = editId
+      ? await dispatch(updateBatch({ batchId: editId, batchData: formData }))
+      : await dispatch(addBatch(formData));
+    if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: editId ? "Batch updated" : "Batch created", variant: "success" });
+      setFormData({
+        name: "",
+        start_date: "",
+        end_date: "",
+        student_ids: [],
+        faculty_ids: [],
+      });
+      setEditId(null);
+      setIsDialogOpen(false);
+      pagination.refetch();
     } else {
-      await dispatch(addBatch(formData));
+      toast({ title: editId ? "Failed to update batch" : "Failed to create batch", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
     }
-    setFormData({
-      name: "",
-      start_date: "",
-      end_date: "",
-      student_ids: [],
-      faculty_ids: [],
-    });
-    setEditId(null);
-    setIsDialogOpen(false);
-    pagination.refetch();
   };
 
   const handleEdit = (batch: any) => {
@@ -106,7 +111,12 @@ export default function BatchesPage() {
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Batch", description: "Are you sure you want to delete this batch?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      await dispatch(deleteBatch(id));
+      const result = await dispatch(deleteBatch(id));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({ title: "Batch deleted", variant: "success" });
+      } else {
+        toast({ title: "Failed to delete batch", variant: "destructive" });
+      }
       pagination.refetch();
     }
   };

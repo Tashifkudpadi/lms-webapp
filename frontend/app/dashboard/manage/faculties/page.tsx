@@ -2,6 +2,7 @@
 "use client";
 
 import { useConfirm } from "@/components/confirm-dialog-provider";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -50,6 +51,7 @@ interface Faculty {
 export default function FacultiesPage() {
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const { error } = useAppSelector((state) => state.facultyReducer);
   const { subjects } = useAppSelector((state) => state.subjectsReducer);
   const pagination = useServerPagination<any>("/faculties", 10);
@@ -84,6 +86,7 @@ export default function FacultiesPage() {
     e.preventDefault();
     const result = await dispatch(addFaculty(formData));
     if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Faculty added", variant: "success" });
       setFormData({
         name: "",
         email: "",
@@ -92,6 +95,8 @@ export default function FacultiesPage() {
       });
       setIsAddDialogOpen(false);
       pagination.refetch();
+    } else {
+      toast({ title: "Failed to add faculty", description: (result as any)?.payload || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -105,16 +110,24 @@ export default function FacultiesPage() {
       })
     );
     if (result.meta.requestStatus === "fulfilled") {
+      toast({ title: "Faculty updated", variant: "success" });
       setEditId(null);
       setIsEditDialogOpen(false);
       pagination.refetch();
+    } else {
+      toast({ title: "Failed to update faculty", variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({ title: "Delete Faculty", description: "Are you sure you want to delete this faculty?", confirmLabel: "Delete", variant: "destructive" });
     if (ok) {
-      await dispatch(deleteFaculty(id));
+      const result = await dispatch(deleteFaculty(id));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({ title: "Faculty deleted", variant: "success" });
+      } else {
+        toast({ title: "Failed to delete faculty", variant: "destructive" });
+      }
       pagination.refetch();
     }
   };

@@ -15,6 +15,8 @@ from app.models.topic import Topic
 from app.models.course_content import CourseContent
 from app.schemas.course import CourseCreate, CourseUpdate, CourseOut, SubjectOutNested, TopicOutNested
 from app.utils.minio_client import delete_file_from_minio
+from app.utils.notifications import create_notification, create_notifications_for_students
+from app.models.notification import NotificationTypeEnum
 
 router = APIRouter()
 
@@ -450,6 +452,15 @@ def add_learner_to_course(course_id: int, student_id: int, db: Session = Depends
 
     # Add student to course
     course.students.append(student)
+    # Notify student
+    user = db.query(User).filter(User.email == student.email).first()
+    if user:
+        create_notification(
+            db, user.id, NotificationTypeEnum.COURSE_ADDED,
+            f"Added to course: {course.course_name}",
+            f"You have been added to the course '{course.course_name}'.",
+            course_id=course.id,
+        )
     db.commit()
     return {"message": f"Student '{student.name}' added to course successfully"}
 
@@ -483,6 +494,15 @@ def remove_learner_from_course(
         if student not in batch.students:
             raise HTTPException(status_code=400, detail="Student is not in this batch")
         batch.students.remove(student)
+        # Notify student
+        user = db.query(User).filter(User.email == student.email).first()
+        if user:
+            create_notification(
+                db, user.id, NotificationTypeEnum.COURSE_REMOVED,
+                f"Removed from course: {course.course_name}",
+                f"You have been removed from the course '{course.course_name}'.",
+                course_id=course.id,
+            )
         db.commit()
         return {"message": f"Student '{student.name}' removed from batch '{batch.name}'"}
     else:
@@ -490,6 +510,15 @@ def remove_learner_from_course(
         if student not in course.students:
             raise HTTPException(status_code=400, detail="Student is not directly added to this course")
         course.students.remove(student)
+        # Notify student
+        user = db.query(User).filter(User.email == student.email).first()
+        if user:
+            create_notification(
+                db, user.id, NotificationTypeEnum.COURSE_REMOVED,
+                f"Removed from course: {course.course_name}",
+                f"You have been removed from the course '{course.course_name}'.",
+                course_id=course.id,
+            )
         db.commit()
         return {"message": f"Student '{student.name}' removed from course"}
 
@@ -572,6 +601,14 @@ def add_batch_to_course(course_id: int, batch_id: int, db: Session = Depends(get
         )
 
     course.batches.append(batch)
+    # Notify batch students
+    student_emails = [s.email for s in batch.students]
+    create_notifications_for_students(
+        db, student_emails, NotificationTypeEnum.COURSE_ADDED,
+        f"Added to course: {course.course_name}",
+        f"Your batch '{batch.name}' has been added to the course '{course.course_name}'.",
+        course_id=course.id,
+    )
     db.commit()
     return {"message": f"Batch '{batch.name}' added to course successfully"}
 
@@ -594,5 +631,13 @@ def remove_batch_from_course(course_id: int, batch_id: int, db: Session = Depend
         raise HTTPException(status_code=400, detail="Batch is not linked to this course")
 
     course.batches.remove(batch)
+    # Notify batch students
+    student_emails = [s.email for s in batch.students]
+    create_notifications_for_students(
+        db, student_emails, NotificationTypeEnum.COURSE_REMOVED,
+        f"Removed from course: {course.course_name}",
+        f"Your batch '{batch.name}' has been removed from the course '{course.course_name}'.",
+        course_id=course.id,
+    )
     db.commit()
     return {"message": f"Batch '{batch.name}' removed from course"}

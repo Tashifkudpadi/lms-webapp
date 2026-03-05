@@ -302,8 +302,9 @@ export default function ContentsTab({
       }
       // Refresh the course to update subjects/topics
       await dispatch(fetchCourseById(Number(courseId)));
-    } catch (e) {
-      // no-op; global error middleware will surface
+      toast({ title: "Subject removed from course", variant: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to remove subject", description: e?.response?.data?.detail || e?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -321,8 +322,9 @@ export default function ContentsTab({
           }),
         );
       }
-    } catch (e) {
-      // no-op; global error middleware will surface
+      toast({ title: "Content deleted", variant: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to delete content", description: e?.response?.data?.detail || e?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -339,8 +341,9 @@ export default function ContentsTab({
       }
       // Refresh the course to update subjects/topics
       await dispatch(fetchCourseById(Number(courseId)));
-    } catch (e) {
-      // no-op; global error middleware will surface
+      toast({ title: "Topic removed from course", variant: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to remove topic", description: e?.response?.data?.detail || e?.message || "Something went wrong", variant: "destructive" });
     }
   };
   // Removed legacy local topic fetching; using topics slice for form topics
@@ -368,8 +371,9 @@ export default function ContentsTab({
         setFormTopicId("");
         await dispatch(fetchTopicsBySubject(created.id));
       }
-    } catch (e) {
-      // rely on global error handling from slice
+      toast({ title: "Subject created", variant: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to create subject", description: e?.response?.data?.detail || e?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setCreatingSubject(false);
     }
@@ -396,8 +400,9 @@ export default function ContentsTab({
       if (resp.data?.id) {
         setFormTopicId(resp.data.id);
       }
-    } catch (e) {
-      // rely on backend/global error handling
+      toast({ title: "Topic created", variant: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to create topic", description: e?.response?.data?.detail || e?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setCreatingTopic(false);
     }
@@ -476,8 +481,9 @@ export default function ContentsTab({
       }
       // Also refresh the course to update subjects/topics
       await dispatch(fetchCourseById(Number(courseId)));
-    } catch (err) {
-      setError("Failed to add content. Please try again.");
+      toast({ title: "Content added successfully", variant: "success" });
+    } catch (err: any) {
+      toast({ title: "Failed to add content", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -559,6 +565,7 @@ export default function ContentsTab({
       });
 
       setEditContent(null);
+      toast({ title: "Content updated", variant: "success" });
       // Refresh contents
       if (selectedTopicId) {
         await dispatch(

@@ -16,12 +16,14 @@ import {
   X,
   GraduationCap,
   Video,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserRole } from "@/types/user";
 import { useAppSelector } from "@/store/hooks";
+import NotificationBell from "@/components/notification-bell";
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -53,6 +55,12 @@ export default function DashboardSidebar() {
       href: "/dashboard/assignments",
       icon: FileText,
       roles: ["admin", "faculty", "student"],
+    },
+    {
+      name: "Messages",
+      href: "/dashboard/messages",
+      icon: MessageSquare,
+      roles: ["faculty", "student"],
     },
     {
       name: "Learners",
@@ -149,14 +157,17 @@ export default function DashboardSidebar() {
               </div>
               <span className="text-lg font-semibold">LMS Dashboard</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden text-white hover:bg-white/10"
-              onClick={toggleMobileMenu}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-white hover:bg-white/10"
+                onClick={toggleMobileMenu}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* User Profile */}
@@ -185,7 +196,10 @@ export default function DashboardSidebar() {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {filteredNavigation.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard" || pathname.startsWith("/dashboard/courses")
+                  : pathname.startsWith(item.href);
 
               return (
                 <div key={item.name} className="relative">

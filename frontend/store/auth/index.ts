@@ -60,9 +60,14 @@ export const authAction = createAsyncThunk(
 
       return response.data; // 👈 only return user
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.detail || "Authentication failed"
-      );
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        return rejectWithValue(detail);
+      }
+      if (Array.isArray(detail) && detail.length > 0) {
+        return rejectWithValue(detail[0]?.msg || "Validation error");
+      }
+      return rejectWithValue("Authentication failed");
     }
   }
 );

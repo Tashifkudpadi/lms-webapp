@@ -11,6 +11,8 @@ import CourseContentsReducer from "./courseContents";
 import TopicsReducer from "./topics";
 import TestsReducer from "./tests";
 import ZoomClassesReducer from "./zoomClasses";
+import NotificationsReducer from "./notifications";
+import MessagesReducer from "./messages";
 
 // Middleware to catch all rejected async thunks and surface as global error
 const globalErrorMiddleware: Middleware = (api) => (next) => (action: unknown) => {
@@ -55,6 +57,8 @@ export const store = configureStore({
     globalErrorReducer: GlobalErrorReducer,
     testsReducer: TestsReducer,
     zoomClassesReducer: ZoomClassesReducer,
+    notificationsReducer: NotificationsReducer,
+    messagesReducer: MessagesReducer,
   },
   middleware: (getDefault) => getDefault().concat(globalErrorMiddleware as any),
 });

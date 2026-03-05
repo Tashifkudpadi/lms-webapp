@@ -55,6 +55,7 @@ import { fetchStudents } from "@/store/students";
 import { fetchFaculties } from "@/store/faculties";
 import { fetchSubjects } from "@/store/subjects";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 interface TestsTabProps {
   courseId: string;
@@ -62,6 +63,7 @@ interface TestsTabProps {
 
 export default function TestsTab({ courseId }: TestsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const { toast } = useToast();
   const { tests, loading, subCategories } = useSelector(
     (state: RootState) => state.testsReducer
   );
@@ -174,6 +176,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
         end_datetime: toISOWithTimezone(newTest.end_datetime),
       };
       await dispatch(createTest(payload)).unwrap();
+      toast({ title: "Test created successfully", variant: "success" });
       setShowCreateTest(false);
       resetForm();
       // Refresh tests list for this course
@@ -182,18 +185,19 @@ export default function TestsTab({ courseId }: TestsTabProps) {
       } else {
         dispatch(fetchTests({ course_id: courseIdNum }));
       }
-    } catch (err) {
-      console.error("Failed to create test:", err);
+    } catch (err: any) {
+      toast({ title: "Failed to create test", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
   const handleCreateSubCategory = async () => {
     try {
       await dispatch(createSubCategory(newSubCategory)).unwrap();
+      toast({ title: "Sub-category created", variant: "success" });
       setShowCreateSubCategory(false);
       setNewSubCategory({ name: "", description: "", exam_type: selectedExamType });
-    } catch (err) {
-      console.error("Failed to create sub-category:", err);
+    } catch (err: any) {
+      toast({ title: "Failed to create sub-category", description: err?.response?.data?.detail || err?.message || "Something went wrong", variant: "destructive" });
     }
   };
 
@@ -1036,14 +1040,20 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                                   <span className="text-xs text-slate-500">Score</span>
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-slate-800">
-                                      {test.attempt_score}/{test.total_marks}
+                                      {test.pass_mark_unit === "percentage"
+                                        ? `${test.attempt_percentage?.toFixed(1)}%`
+                                        : `${test.attempt_score}/${test.total_marks}`}
                                     </span>
                                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                                      test.attempt_score >= (test.passing_marks ?? 0)
+                                      (test.pass_mark_unit === "percentage"
+                                        ? (test.attempt_percentage ?? 0) >= (test.passing_marks ?? 0)
+                                        : test.attempt_score >= (test.passing_marks ?? 0))
                                         ? "bg-emerald-100 text-emerald-700"
                                         : "bg-red-100 text-red-700"
                                     }`}>
-                                      {test.attempt_score >= (test.passing_marks ?? 0) ? "PASS" : "FAIL"}
+                                      {(test.pass_mark_unit === "percentage"
+                                        ? (test.attempt_percentage ?? 0) >= (test.passing_marks ?? 0)
+                                        : test.attempt_score >= (test.passing_marks ?? 0)) ? "PASS" : "FAIL"}
                                     </span>
                                   </div>
                                 </div>
@@ -1118,7 +1128,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                                 className="w-full border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                                 asChild
                               >
-                                <Link href={`/dashboard/tests/${test.id}`}>
+                                <Link href={`/dashboard/tests/${test.id}?courseId=${courseId}`}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </Link>

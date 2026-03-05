@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   # ───────────────────────────────
-  # 🟨 PostgreSQL Database
+  # PostgreSQL Database
   # ───────────────────────────────
   postgres:
     image: postgres:15
@@ -20,7 +18,7 @@ services:
       - lms_net
 
   # ───────────────────────────────
-  # 🟩 pgAdmin (Database UI)
+  # pgAdmin (Database UI)
   # ───────────────────────────────
   pgadmin:
     image: dpage/pgadmin4
@@ -37,7 +35,7 @@ services:
       - lms_net
 
   # ───────────────────────────────
-  # 🟦 MinIO Storage
+  # MinIO Storage
   # ───────────────────────────────
   minio:
     image: minio/minio
@@ -58,18 +56,18 @@ services:
       - lms_net
 
   # ───────────────────────────────
-  # 🟥 FastAPI Backend
+  # FastAPI Backend
   # ───────────────────────────────
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     container_name: lms_backend
     restart: always
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - .env
     depends_on:
       - postgres
       - minio
@@ -77,13 +75,13 @@ services:
       - lms_net
 
 # ───────────────────────────────
-# 🔵 Networks
+# Networks
 # ───────────────────────────────
 networks:
   lms_net:
 
 # ───────────────────────────────
-# 📦 Volumes
+# Volumes
 # ───────────────────────────────
 volumes:
   postgres_data:

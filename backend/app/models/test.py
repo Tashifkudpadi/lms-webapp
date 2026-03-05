@@ -99,6 +99,7 @@ class Test(Base):
     duration_minutes = Column(Integer, nullable=True)  # Test duration in minutes
     total_marks = Column(Float, default=0)
     passing_marks = Column(Float, nullable=True)
+    pass_mark_unit = Column(String, default="percentage")  # "percentage", "point"
     negative_marking = Column(Float, default=0)  # Negative marks per wrong answer
 
     # Activation
