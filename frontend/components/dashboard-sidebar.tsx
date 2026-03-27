@@ -142,7 +142,7 @@ export default function DashboardSidebar() {
       {/* Sidebar for desktop */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 transform bg-gradient-to-b from-slate-900 via-blue-900 to-purple-900 text-white border-r border-white/10 transition-transform duration-300 ease-in-out",
+          "fixed inset-y-0 left-0 z-30 w-64 transform bg-gradient-to-b from-slate-800 via-indigo-900 to-slate-900 text-white border-r border-white/10 transition-transform duration-300 ease-in-out",
           isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
@@ -152,7 +152,7 @@ export default function DashboardSidebar() {
           {/* Header */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <span className="text-lg font-semibold">LMS Dashboard</span>
@@ -205,7 +205,7 @@ export default function DashboardSidebar() {
                 <div key={item.name} className="relative">
                   {/* Active Dot Indicator */}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-400 to-purple-400 rounded-r-full shadow-lg shadow-blue-500/50"></div>
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-indigo-400 to-blue-400 rounded-r-full shadow-lg shadow-indigo-500/50"></div>
                   )}
 
                   <Link
@@ -213,14 +213,14 @@ export default function DashboardSidebar() {
                     className={cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
                       isActive
-                        ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-2 border-transparent ml-1"
+                        ? "bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-white shadow-lg border-l-2 border-transparent ml-1"
                         : "text-gray-300 hover:text-white hover:bg-white/10 ml-1"
                     )}
                   >
                     <item.icon
                       className={cn(
                         "mr-3 h-4 w-4",
-                        isActive ? "text-blue-300" : ""
+                        isActive ? "text-indigo-300" : ""
                       )}
                     />
                     <span className={isActive ? "font-semibold" : ""}>
@@ -229,7 +229,7 @@ export default function DashboardSidebar() {
 
                     {/* Additional glow effect for active item */}
                     {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-md blur-sm -z-10"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-blue-500/10 rounded-md blur-sm -z-10"></div>
                     )}
                   </Link>
                 </div>

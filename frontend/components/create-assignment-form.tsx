@@ -78,7 +78,7 @@ export default function CreateAssignmentForm({ children }: CreateAssignmentFormP
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/30">
         <DialogHeader className="space-y-3">
           <DialogTitle className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-amber-600 to-orange-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-amber-600 to-rose-500 rounded-lg flex items-center justify-center">
               <FileText className="w-4 h-4 text-white" />
             </div>
             Create New Assignment
@@ -93,7 +93,7 @@ export default function CreateAssignmentForm({ children }: CreateAssignmentFormP
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-indigo-600" />
                 Assignment Information
               </CardTitle>
               <CardDescription>Basic details about your assignment</CardDescription>
@@ -306,7 +306,7 @@ export default function CreateAssignmentForm({ children }: CreateAssignmentFormP
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <Paperclip className="w-5 h-5 text-purple-600" />
+                <Paperclip className="w-5 h-5 text-rose-500" />
                 Resources & Materials
               </CardTitle>
               <CardDescription>Provide helpful resources for students</CardDescription>
@@ -361,7 +361,7 @@ export default function CreateAssignmentForm({ children }: CreateAssignmentFormP
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-600" />
+                <Settings className="w-5 h-5 text-rose-500" />
                 Grading Rubric
               </CardTitle>
               <CardDescription>Define grading criteria and expectations</CardDescription>
@@ -478,7 +478,7 @@ export default function CreateAssignmentForm({ children }: CreateAssignmentFormP
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
+              className="bg-gradient-to-r from-amber-600 to-rose-500 hover:from-amber-700 hover:to-rose-600 text-white"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

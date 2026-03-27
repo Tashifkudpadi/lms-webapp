@@ -163,12 +163,12 @@ export default function ViewCoursePage({
   ];
 
   return (
-    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative">
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 relative">
       {/* Dots Background Pattern */}
       <div
         className="absolute inset-0 opacity-15 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, #3b82f6 1.5px, transparent 1.5px)`,
+          backgroundImage: `radial-gradient(circle, #6366f1 1.5px, transparent 1.5px)`,
           backgroundSize: "35px 35px",
           backgroundPosition: "0 0, 17.5px 17.5px",
         }}
@@ -181,7 +181,7 @@ export default function ViewCoursePage({
             variant="outline"
             size="sm"
             asChild
-            className="bg-white/70 backdrop-blur-sm border-blue-200 text-blue-800 hover:bg-blue-50"
+            className="bg-white/70 backdrop-blur-sm border-indigo-200 text-indigo-800 hover:bg-indigo-50"
           >
             <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -191,7 +191,7 @@ export default function ViewCoursePage({
         </div>
 
         {/* Course Header */}
-        <div className="bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 backdrop-blur-xl rounded-2xl border border-white/30 shadow-2xl p-8 text-white">
+        <div className="bg-gradient-to-br from-indigo-500 via-indigo-700 to-slate-900 backdrop-blur-xl rounded-2xl border border-white/30 shadow-2xl p-8 text-white">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Course Info */}
             <div className="lg:col-span-2 space-y-6">
@@ -200,7 +200,7 @@ export default function ViewCoursePage({
                 <h1 className="text-4xl font-bold text-white">
                   {course.title}
                 </h1>
-                <p className="text-lg text-blue-100">{course.description}</p>
+                <p className="text-lg text-indigo-100">{course.description}</p>
               </div>
 
               {/* Course Stats */}
@@ -209,39 +209,39 @@ export default function ViewCoursePage({
                   <div className="text-2xl font-bold text-white">
                     {(selected as any)?.student_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Students</div>
+                  <div className="text-sm text-indigo-100">Students</div>
                 </div>
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
                     {(selected as any)?.batch_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Batches</div>
+                  <div className="text-sm text-indigo-100">Batches</div>
                 </div>
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
                     {(selected as any)?.subject_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Subjects</div>
+                  <div className="text-sm text-indigo-100">Subjects</div>
                 </div>
                 <div className="text-center p-4 bg-white/20 rounded-xl backdrop-blur-sm">
                   <div className="text-2xl font-bold text-white">
                     {(selected as any)?.topic_ids?.length ?? 0}
                   </div>
-                  <div className="text-sm text-blue-100">Topics</div>
+                  <div className="text-sm text-indigo-100">Topics</div>
                 </div>
               </div>
             </div>
 
             {/* Instructor Card */}
             <div className="space-y-6">
-              <Card className="bg-white/90 backdrop-blur-xl border border-blue-200 shadow-xl">
+              <Card className="bg-white/90 backdrop-blur-xl border border-indigo-200 shadow-xl">
                 <CardHeader className="text-center">
                   <Avatar className="h-20 w-20 mx-auto ring-4 ring-white/30">
                     <AvatarImage
                       src={course.instructor.avatar || "/placeholder.svg"}
                       alt={course.instructor.name || "Instructor"}
                     />
-                    <AvatarFallback className="bg-blue-600 text-white text-lg font-bold">
+                    <AvatarFallback className="bg-indigo-500 text-white text-lg font-bold">
                       {(course.instructor.name || "").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
@@ -256,7 +256,7 @@ export default function ViewCoursePage({
                   {isStudent ? (
                     <MessageInstructorDialog courseId={Number(id)} />
                   ) : (
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                    <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white">
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Message Instructor
                     </Button>
@@ -268,9 +268,9 @@ export default function ViewCoursePage({
         </div>
 
         {/* Course Content Tabs */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-blue-200 shadow-2xl p-6">
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-indigo-200 shadow-2xl p-6">
           <Tabs defaultValue="contents" className="w-full">
-            <TabsList className={`grid w-full ${tabGridClass} bg-gradient-to-r from-blue-100 to-purple-100 backdrop-blur-sm border border-blue-200 rounded-xl p-1 shadow-lg`}>
+            <TabsList className={`grid w-full ${tabGridClass} bg-gradient-to-r from-indigo-100 to-blue-100 backdrop-blur-sm border border-indigo-200 rounded-xl p-1 shadow-lg`}>
               <TabsTrigger
                 value="contents"
                 className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg rounded-lg font-medium transition-all duration-200"

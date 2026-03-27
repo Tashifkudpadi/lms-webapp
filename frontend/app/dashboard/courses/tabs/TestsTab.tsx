@@ -310,7 +310,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
       <div className="flex justify-end">
         <Button
           onClick={openCreateTestDialog}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
           Create Test
@@ -324,7 +324,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
         <CreateTestButton />
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
             <p className="mt-4 text-muted-foreground">Loading tests...</p>
           </div>
         </div>
@@ -448,7 +448,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                         type="button"
                         variant="link"
                         size="sm"
-                        className="h-auto p-0 text-blue-600"
+                        className="h-auto p-0 text-indigo-600"
                         onClick={() => {
                           setNewSubCategory({ ...newSubCategory, exam_type: newTest.exam_type });
                           setShowCreateSubCategory(true);
@@ -663,7 +663,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                             <Badge
                               key={id}
                               variant="secondary"
-                              className="cursor-pointer bg-blue-50"
+                              className="cursor-pointer bg-indigo-50"
                               onClick={() =>
                                 setNewTest({ ...newTest, student_ids: newTest.student_ids.filter((sid) => sid !== id) })
                               }
@@ -728,7 +728,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                                 <Badge
                                   key={id}
                                   variant="secondary"
-                                  className="cursor-pointer bg-purple-50"
+                                  className="cursor-pointer bg-rose-50"
                                   onClick={() =>
                                     setNewTest({ ...newTest, faculty_ids: newTest.faculty_ids.filter((fid) => fid !== id) })
                                   }
@@ -804,7 +804,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                   !newTest.total_marks || newTest.total_marks <= 0 ||
                   !newTest.passing_marks || newTest.passing_marks <= 0
                 }
-                className="bg-gradient-to-r from-blue-600 to-purple-600"
+                className="bg-gradient-to-r from-indigo-500 to-blue-500"
               >
                 Create Test
               </Button>
@@ -848,7 +848,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
               <Button
                 onClick={handleCreateSubCategory}
                 disabled={!newSubCategory.name}
-                className="bg-gradient-to-r from-blue-600 to-purple-600"
+                className="bg-gradient-to-r from-indigo-500 to-blue-500"
               >
                 Create
               </Button>
@@ -863,23 +863,23 @@ export default function TestsTab({ courseId }: TestsTabProps) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
           <CardContent className="pt-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-2xl font-bold text-indigo-700">
                 {upscPrelimsCount + upscMainsCount}
               </p>
-              <p className="text-sm text-blue-600">UPSC Tests</p>
+              <p className="text-sm text-indigo-600">UPSC Tests</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-rose-200">
           <CardContent className="pt-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-700">
+              <p className="text-2xl font-bold text-rose-600">
                 {tnpscPrelimsCount + tnpscMainsCount}
               </p>
-              <p className="text-sm text-purple-600">TNPSC Tests</p>
+              <p className="text-sm text-rose-500">TNPSC Tests</p>
             </div>
           </CardContent>
         </Card>
@@ -893,13 +893,13 @@ export default function TestsTab({ courseId }: TestsTabProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-rose-200">
           <CardContent className="pt-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-700">
+              <p className="text-2xl font-bold text-rose-600">
                 {upscMainsCount + tnpscMainsCount}
               </p>
-              <p className="text-sm text-orange-600">Mains</p>
+              <p className="text-sm text-rose-500">Mains</p>
             </div>
           </CardContent>
         </Card>
@@ -967,7 +967,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                       ? "from-emerald-500 to-green-500"
                       : test.status === TestStatus.ARCHIVED
                         ? "from-slate-400 to-slate-500"
-                        : "from-amber-400 to-orange-400";
+                        : "from-amber-400 to-blue-400";
 
                     return (
                       <Card
@@ -990,8 +990,8 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                           <div className="flex items-center gap-2 mb-4">
                             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-md ${
                               selectedCategory === TestCategory.MAINS
-                                ? "bg-purple-600 text-white shadow-sm shadow-purple-200"
-                                : "bg-blue-600 text-white shadow-sm shadow-blue-200"
+                                ? "bg-rose-500 text-white shadow-sm shadow-rose-200"
+                                : "bg-indigo-500 text-white shadow-sm shadow-indigo-200"
                             }`}>
                               {selectedCategory === TestCategory.MAINS ? (
                                 <><FileText className="h-3.5 w-3.5" /> Mains</>
@@ -1109,7 +1109,7 @@ export default function TestsTab({ courseId }: TestsTabProps) {
                                 <Button
                                   asChild
                                   size="sm"
-                                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
+                                  className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white shadow-sm"
                                 >
                                   <Link href={`/dashboard/tests/${test.id}/take?courseId=${courseId}`}>
                                     <Play className="h-4 w-4 mr-2" />

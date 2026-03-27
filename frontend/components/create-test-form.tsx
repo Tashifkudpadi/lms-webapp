@@ -115,7 +115,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-indigo-600" />
                 Test Information
               </CardTitle>
               <CardDescription>Basic details about your test</CardDescription>
@@ -138,7 +138,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                     Course *
                   </Label>
                   <Select required>
-                    <SelectTrigger className="bg-white/50 border-slate-200 focus:border-blue-500">
+                    <SelectTrigger className="bg-white/50 border-slate-200 focus:border-indigo-500">
                       <SelectValue placeholder="Select course" />
                     </SelectTrigger>
                     <SelectContent>
@@ -158,7 +158,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                 <Textarea
                   id="test-description"
                   placeholder="Brief description of what this test covers..."
-                  className="bg-white/50 border-slate-200 focus:border-blue-500 min-h-[80px]"
+                  className="bg-white/50 border-slate-200 focus:border-indigo-500 min-h-[80px]"
                 />
               </div>
 
@@ -174,7 +174,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                     required
                     min="1"
                     max="300"
-                    className="bg-white/50 border-slate-200 focus:border-blue-500"
+                    className="bg-white/50 border-slate-200 focus:border-indigo-500"
                   />
                 </div>
                 <div className="space-y-2">
@@ -188,7 +188,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                     required
                     min="1"
                     max="10"
-                    className="bg-white/50 border-slate-200 focus:border-blue-500"
+                    className="bg-white/50 border-slate-200 focus:border-indigo-500"
                   />
                 </div>
                 <div className="space-y-2">
@@ -201,7 +201,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                     placeholder="e.g., 70"
                     min="0"
                     max="100"
-                    className="bg-white/50 border-slate-200 focus:border-blue-500"
+                    className="bg-white/50 border-slate-200 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -267,7 +267,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-purple-600" />
+                <Settings className="w-5 h-5 text-rose-500" />
                 Questions ({questions.length}) - Total Points: {totalPoints}
               </CardTitle>
               <CardDescription>Add questions to your test</CardDescription>
@@ -347,7 +347,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
                             onChange={(e) =>
                               setCurrentQuestion({ ...currentQuestion, correctAnswer: Number.parseInt(e.target.value) })
                             }
-                            className="text-blue-600"
+                            className="text-indigo-600"
                           />
                           <span className="text-xs text-slate-500">Correct</span>
                         </div>
@@ -420,7 +420,7 @@ export default function CreateTestForm({ children }: CreateTestFormProps) {
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-600" />
+                <Settings className="w-5 h-5 text-rose-500" />
                 Test Settings
               </CardTitle>
               <CardDescription>Configure additional test options</CardDescription>

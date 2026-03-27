@@ -265,7 +265,7 @@ export default function TakeTestPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading test...</p>
         </div>
       </div>
@@ -284,7 +284,7 @@ export default function TakeTestPage() {
     const wrongQ = submitResult?.wrong_answers ?? 0;
 
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 p-6">
         <div className="max-w-lg w-full space-y-6">
           <Card>
             <CardContent className="pt-6 text-center">
@@ -324,11 +324,11 @@ export default function TakeTestPage() {
                 {/* Stats grid */}
                 <div className="grid grid-cols-4 gap-3 pt-3 border-t">
                   <div className="text-center">
-                    <p className="text-xl font-bold text-blue-600">{totalQ}</p>
+                    <p className="text-xl font-bold text-indigo-600">{totalQ}</p>
                     <p className="text-xs text-muted-foreground">Total</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-bold text-purple-600">{attemptedQ}</p>
+                    <p className="text-xl font-bold text-rose-500">{attemptedQ}</p>
                     <p className="text-xs text-muted-foreground">Attempted</p>
                   </div>
                   <div className="text-center">
@@ -366,7 +366,7 @@ export default function TakeTestPage() {
               </Button>
             )}
             <Button
-              className={`${isPrelims && isEvaluated && attemptId ? "flex-1" : "w-full"} bg-gradient-to-r from-blue-600 to-purple-600`}
+              className={`${isPrelims && isEvaluated && attemptId ? "flex-1" : "w-full"} bg-gradient-to-r from-indigo-500 to-blue-500`}
               onClick={() => router.push(backUrl)}
             >
               Back to Tests
@@ -389,7 +389,7 @@ export default function TakeTestPage() {
   // Instructions screen before starting
   if (!started) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 p-6">
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
@@ -459,9 +459,9 @@ export default function TakeTestPage() {
               )}
 
               {!testUnavailable && (
-                <div className="flex items-center gap-2 p-4 bg-blue-50 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-blue-600" />
-                  <p className="text-sm text-blue-800">
+                <div className="flex items-center gap-2 p-4 bg-indigo-50 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-indigo-600" />
+                  <p className="text-sm text-indigo-800">
                     {isPrelims
                       ? "Once you start the test, the timer will begin. Make sure you have a stable internet connection."
                       : "Download the question paper, solve the questions offline, and upload your answer sheet before the time ends."}
@@ -472,7 +472,7 @@ export default function TakeTestPage() {
               <Button
                 onClick={handleStartTest}
                 size="lg"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                className="w-full bg-gradient-to-r from-indigo-500 to-blue-500"
                 disabled={testUnavailable}
               >
                 {testNotStartedYet ? "Test Not Started Yet" : testExpired ? "Test Expired" : "Start Test"}
@@ -487,7 +487,7 @@ export default function TakeTestPage() {
   // Mains test interface
   if (isMains) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 p-6">
         {/* Header with timer */}
         <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 p-4">
           <div className="max-w-4xl mx-auto flex justify-between items-center">
@@ -495,7 +495,7 @@ export default function TakeTestPage() {
             {timeLeft !== null && (
               <div
                 className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-                  timeLeft <= 300 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                  timeLeft <= 300 ? "bg-red-100 text-red-700" : "bg-indigo-100 text-indigo-700"
                 }`}
               >
                 <Clock className="w-5 h-5" />
@@ -513,7 +513,7 @@ export default function TakeTestPage() {
             <CardContent className="space-y-6">
               {/* Question Paper Download */}
               <div className="p-6 bg-slate-50 rounded-lg text-center">
-                <FileText className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+                <FileText className="w-12 h-12 mx-auto text-indigo-600 mb-4" />
                 <h3 className="font-medium mb-2">Question Paper</h3>
                 {test.question_file_url ? (
                   <Button variant="outline" asChild>
@@ -599,9 +599,9 @@ export default function TakeTestPage() {
       {/* Pulse animation for active circle */}
       <style jsx>{`
         @keyframes pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
-          70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+          0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.5); }
+          70% { box-shadow: 0 0 0 6px rgba(147, 51, 234, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
         }
         .active-pulse {
           animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -612,7 +612,7 @@ export default function TakeTestPage() {
       <div className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-slate-200 z-50">
         <div className="flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0">
               <FileText className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-base font-semibold text-slate-900 truncate">{test.test_name}</h1>
@@ -637,7 +637,7 @@ export default function TakeTestPage() {
             <Button
               size="sm"
               onClick={() => setShowSubmitDialog(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-sm"
+              className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 shadow-sm"
             >
               <Send className="w-3.5 h-3.5 mr-1.5" />
               Submit Test
@@ -647,7 +647,7 @@ export default function TakeTestPage() {
         {/* Progress bar */}
         <div className="h-1 bg-slate-100">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -668,7 +668,7 @@ export default function TakeTestPage() {
                       <span className="text-sm font-bold text-slate-900">{currentQuestion + 1}</span>
                       <span className="text-xs text-slate-400">of {displayQuestions.length}</span>
                     </div>
-                    <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                    <Badge variant="outline" className="border-indigo-200 text-indigo-700 bg-indigo-50">
                       {currentQ.marks} {currentQ.marks === 1 ? "mark" : "marks"}
                     </Badge>
                   </div>
@@ -710,7 +710,7 @@ export default function TakeTestPage() {
                             onClick={() => handleSelectOption(currentQ.id, opt.option_number)}
                             className={`w-full group relative rounded-xl border-2 text-left transition-all duration-200 ${
                               isSelected
-                                ? "border-blue-500 bg-blue-50 shadow-sm shadow-blue-100"
+                                ? "border-indigo-500 bg-indigo-50 shadow-sm shadow-indigo-100"
                                 : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm"
                             }`}
                           >
@@ -718,17 +718,17 @@ export default function TakeTestPage() {
                               <span
                                 className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-all duration-200 ${
                                   isSelected
-                                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                                    ? "bg-indigo-500 text-white shadow-md shadow-indigo-200"
                                     : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                                 }`}
                               >
                                 {String.fromCharCode(64 + opt.option_number)}
                               </span>
-                              <span className={`text-sm leading-relaxed ${isSelected ? "text-blue-900 font-medium" : "text-slate-700"}`}>
+                              <span className={`text-sm leading-relaxed ${isSelected ? "text-indigo-900 font-medium" : "text-slate-700"}`}>
                                 {opt.option_text}
                               </span>
                               {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-blue-600 ml-auto flex-shrink-0" />
+                                <CheckCircle className="w-5 h-5 text-indigo-600 ml-auto flex-shrink-0" />
                               )}
                             </div>
                           </button>
@@ -787,9 +787,9 @@ export default function TakeTestPage() {
                 <p className="text-lg font-bold text-slate-600">{getTotalQuestions() - getAnsweredCount()}</p>
                 <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Remaining</p>
               </div>
-              <div className="flex-1 text-center py-2 rounded-lg bg-blue-50 border border-blue-100">
-                <p className="text-lg font-bold text-blue-700">{getTotalQuestions()}</p>
-                <p className="text-[10px] font-medium text-blue-600 uppercase tracking-wider">Total</p>
+              <div className="flex-1 text-center py-2 rounded-lg bg-indigo-50 border border-indigo-100">
+                <p className="text-lg font-bold text-indigo-700">{getTotalQuestions()}</p>
+                <p className="text-[10px] font-medium text-indigo-600 uppercase tracking-wider">Total</p>
               </div>
             </div>
           </div>
@@ -807,7 +807,7 @@ export default function TakeTestPage() {
                     onClick={() => setCurrentQuestion(idx)}
                     className={`relative w-11 h-11 rounded-full text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                       isCurrent
-                        ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200 active-pulse focus:ring-blue-400"
+                        ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-200 active-pulse focus:ring-indigo-400"
                         : isAnswered
                         ? "bg-green-500 text-white shadow-sm hover:bg-green-600 hover:shadow-md focus:ring-green-400"
                         : "bg-white text-slate-600 border-2 border-slate-200 hover:border-slate-400 hover:bg-slate-50 hover:shadow-sm focus:ring-slate-400"
@@ -830,7 +830,7 @@ export default function TakeTestPage() {
           <div className="p-4 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm"></div>
+                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm"></div>
                 <span>Current</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -859,7 +859,7 @@ export default function TakeTestPage() {
             You have only 5 minutes left to complete the test. Please review your answers and submit.
           </p>
           <DialogFooter>
-            <Button onClick={() => setShowTimeWarning(false)} className="bg-gradient-to-r from-blue-600 to-purple-600">
+            <Button onClick={() => setShowTimeWarning(false)} className="bg-gradient-to-r from-indigo-500 to-blue-500">
               Continue
             </Button>
           </DialogFooter>
@@ -874,9 +874,9 @@ export default function TakeTestPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 rounded-xl bg-blue-50 border border-blue-100">
-                <p className="text-xl font-bold text-blue-700">{getTotalQuestions()}</p>
-                <p className="text-[10px] font-medium text-blue-500 uppercase tracking-wider">Total</p>
+              <div className="text-center p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+                <p className="text-xl font-bold text-indigo-700">{getTotalQuestions()}</p>
+                <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider">Total</p>
               </div>
               <div className="text-center p-3 rounded-xl bg-green-50 border border-green-100">
                 <p className="text-xl font-bold text-green-700">{getAnsweredCount()}</p>
@@ -913,7 +913,7 @@ export default function TakeTestPage() {
             <Button
               onClick={handleSubmitTest}
               disabled={submitting}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500"
             >
               {submitting ? "Submitting..." : "Confirm Submit"}
             </Button>

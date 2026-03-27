@@ -115,7 +115,7 @@ export default function MessagesPage() {
                     "p-3 border-b cursor-pointer hover:bg-slate-50 transition-colors",
                     selectedConvo?.courseId === c.course_id &&
                       selectedConvo?.otherUserId === c.other_user_id &&
-                      "bg-blue-50"
+                      "bg-indigo-50"
                   )}
                 >
                   <div className="flex justify-between items-start">
@@ -165,7 +165,7 @@ export default function MessagesPage() {
                       className={cn(
                         "max-w-[80%] p-3 rounded-lg text-sm",
                         msg.sender_id === user?.id
-                          ? "ml-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                          ? "ml-auto bg-gradient-to-r from-indigo-500 to-blue-400 text-white"
                           : "bg-slate-100"
                       )}
                     >
@@ -200,7 +200,7 @@ export default function MessagesPage() {
                 <Button
                   onClick={handleSend}
                   disabled={!reply.trim() || sending}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white self-end"
+                  className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white self-end"
                 >
                   <Send className="h-4 w-4" />
                 </Button>

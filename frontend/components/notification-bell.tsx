@@ -118,7 +118,7 @@ export default function NotificationBell() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-blue-600 h-auto py-1 px-2"
+                className="text-xs text-indigo-600 h-auto py-1 px-2"
                 onClick={() => dispatch(markAllNotificationsRead())}
               >
                 <CheckCheck className="h-3 w-3 mr-1" /> Mark all read
@@ -148,13 +148,13 @@ export default function NotificationBell() {
                 onClick={() => handleClick(notif)}
                 className={cn(
                   "p-3 border-b hover:bg-slate-50 transition-colors",
-                  !notif.is_read && "bg-blue-50/50",
+                  !notif.is_read && "bg-indigo-50/50",
                   notif.type === "COURSE_REMOVED" ? "cursor-default" : "cursor-pointer"
                 )}
               >
                 <div className="flex items-start gap-2">
                   {!notif.is_read && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full mt-1.5 shrink-0" />
                   )}
                   <div className={cn("flex-1 min-w-0", notif.is_read && "ml-4")}>
                     <p className="text-sm font-medium truncate">

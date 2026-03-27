@@ -156,7 +156,7 @@ export default function SettingsTab({ courseId, course, selected }: SettingsTabP
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white/80 backdrop-blur-xl border border-blue-200 shadow-2xl">
+      <Card className="bg-white/80 backdrop-blur-xl border border-indigo-200 shadow-2xl">
         <CardHeader>
           <CardTitle className="text-slate-900">Course Settings</CardTitle>
           <CardDescription>Update basic course details</CardDescription>
@@ -210,12 +210,12 @@ export default function SettingsTab({ courseId, course, selected }: SettingsTabP
                   </div>
                 ) : (
                   <div
-                    className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
+                    className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {uploading ? (
                       <div className="flex flex-col items-center">
-                        <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                        <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
                         <p className="text-sm text-slate-600 mt-1">Uploading...</p>
                       </div>
                     ) : (
@@ -328,7 +328,7 @@ export default function SettingsTab({ courseId, course, selected }: SettingsTabP
               </Button>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
               >
                 Save Changes
               </Button>

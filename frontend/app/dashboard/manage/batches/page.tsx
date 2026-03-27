@@ -236,7 +236,7 @@ export default function BatchesPage() {
                 <TableCell>{pagination.startIndex + index}</TableCell>
                 <TableCell>
                   <button
-                    className="text-blue-600 hover:underline"
+                    className="text-indigo-600 hover:underline"
                     onClick={() => handleBatchClick(batch)}
                   >
                     {batch.name}

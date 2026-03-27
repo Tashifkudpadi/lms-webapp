@@ -150,7 +150,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-blue-600" />
+          <Users className="h-6 w-6 text-indigo-600" />
           <h3 className="text-xl font-bold text-slate-900">
             Learners ({pagination.totalItems})
           </h3>
@@ -158,7 +158,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
         {isAdmin && (
           <Button
             onClick={openAddDialog}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
           >
             <UserPlus className="h-4 w-4 mr-2" />
             Add Learner
@@ -216,7 +216,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
                   </TableCell>
                   <TableCell>
                     {learner.source === "batch" ? (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
                         {learner.batch_name}
                       </Badge>
                     ) : (
@@ -305,7 +305,7 @@ export default function LearnersTab({ courseId }: { courseId: string | number })
                         variant="outline"
                         disabled={addingStudent}
                         onClick={() => handleAddStudent(student)}
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
                       >
                         Add
                       </Button>

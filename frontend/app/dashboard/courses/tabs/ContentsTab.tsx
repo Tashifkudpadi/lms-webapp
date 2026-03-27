@@ -80,9 +80,9 @@ const CONTENT_TYPE_CONFIG: Record<string, {
     label: "Video",
     pluralLabel: "Videos",
     icon: Film,
-    iconColorClass: "text-blue-600",
-    bgColorClass: "bg-blue-50",
-    badgeColorClass: "bg-blue-100 text-blue-700 border-blue-200",
+    iconColorClass: "text-indigo-600",
+    bgColorClass: "bg-indigo-50",
+    badgeColorClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
   },
   youtube: {
     label: "YouTube",
@@ -610,7 +610,7 @@ export default function ContentsTab({
                 >
                   <div className="px-4 py-3 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-md bg-blue-600/10 text-blue-700 flex items-center justify-center">
+                      <div className="h-7 w-7 rounded-md bg-indigo-500/10 text-indigo-700 flex items-center justify-center">
                         <BookOpen className="h-4 w-4" />
                       </div>
                       <span
@@ -651,19 +651,19 @@ export default function ContentsTab({
                             <li key={t.id}>
                               <div
                                 className={`w-full px-2 py-1.5 rounded-md transition-colors flex items-center justify-between ${
-                                  active ? "bg-blue-50/80" : "hover:bg-slate-50"
+                                  active ? "bg-indigo-50/80" : "hover:bg-slate-50"
                                 }`}
                               >
                                 <button
                                   type="button"
                                   className={`text-left flex items-center gap-2 border border-transparent ${
-                                    active ? "text-blue-800" : "text-slate-700"
+                                    active ? "text-indigo-800" : "text-slate-700"
                                   }`}
                                   onClick={() => handleTopicClick(s.id, t.id)}
                                 >
                                   <span
                                     className={`h-2 w-2 rounded-full ${
-                                      active ? "bg-blue-600" : "bg-slate-300"
+                                      active ? "bg-indigo-500" : "bg-slate-300"
                                     }`}
                                   />
                                   <span
@@ -722,7 +722,7 @@ export default function ContentsTab({
             </div>
           ) : loadingContents ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-sm text-slate-500">Loading contents...</p>
             </div>
           ) : contents.length === 0 ? (
@@ -814,7 +814,7 @@ export default function ContentsTab({
                               <video src={c.file_url || ""} className="w-full h-full object-cover" preload="metadata" muted />
                               <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                                 <div className="h-14 w-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                  <Play className="h-6 w-6 text-blue-600 ml-0.5" />
+                                  <Play className="h-6 w-6 text-indigo-600 ml-0.5" />
                                 </div>
                               </div>
                             </div>
@@ -899,7 +899,7 @@ export default function ContentsTab({
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p
-                                  className="text-sm font-semibold text-slate-900 truncate cursor-pointer hover:text-blue-700 transition-colors"
+                                  className="text-sm font-semibold text-slate-900 truncate cursor-pointer hover:text-indigo-700 transition-colors"
                                   onClick={() => handleOpenContent(c)}
                                 >
                                   {c.title}
@@ -936,7 +936,7 @@ export default function ContentsTab({
           <Button
             type="button"
             onClick={() => setShowForm((s) => !s)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
           >
             {showForm ? "Close" : "Add Content"}
           </Button>
@@ -951,7 +951,7 @@ export default function ContentsTab({
             : "opacity-0 scale-y-0 h-0 overflow-hidden"
         }`}
       >
-        <Card className="bg-white/80 backdrop-blur-xl border border-blue-200 shadow-2xl">
+        <Card className="bg-white/80 backdrop-blur-xl border border-indigo-200 shadow-2xl">
           <CardContent className="p-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1076,7 +1076,7 @@ export default function ContentsTab({
                 <Button
                   type="submit"
                   disabled={uploading}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
                 >
                   {uploading ? "Uploading..." : "Add Content"}
                 </Button>

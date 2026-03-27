@@ -43,12 +43,12 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative">
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 relative">
       {/* Dots Background Pattern */}
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, #3b82f6 1px, transparent 1px)`,
+          backgroundImage: `radial-gradient(circle, #6366f1 1px, transparent 1px)`,
           backgroundSize: "20px 20px",
           backgroundPosition: "0 0, 10px 10px",
         }}
@@ -58,7 +58,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium border border-blue-200">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium border border-indigo-200">
               <TrendingUp className="w-4 h-4" />
               Dashboard Overview
             </div>
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </div>
           {isAdmin && (
             <CreateCourseForm onSuccess={() => allPagination.refetch()}>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+              <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white shadow-lg">
                 <Plus className="mr-2 h-4 w-4" />
                 Create New Course
               </Button>
@@ -86,23 +86,23 @@ export default function DashboardPage() {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"} bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200`}>
+              <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"} bg-gradient-to-r from-indigo-100 to-blue-100 border border-indigo-200`}>
                 <TabsTrigger
                   value="all"
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
                 >
                   All Courses
                 </TabsTrigger>
                 <TabsTrigger
                   value="public"
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
                 >
                   Public
                 </TabsTrigger>
                 {isAdmin && (
                   <TabsTrigger
                     value="deleted"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
                   >
                     Deleted
                   </TabsTrigger>
@@ -256,7 +256,7 @@ function CourseCard({ course }: { course: any }) {
           <div className="pt-2">
             <Button
               variant="outline"
-              className="w-full bg-gradient-to-r from-blue-100 to-purple-100"
+              className="w-full bg-gradient-to-r from-indigo-100 to-blue-100"
               asChild
             >
               <Link href={`/dashboard/courses/${course.id}`}>View Course</Link>

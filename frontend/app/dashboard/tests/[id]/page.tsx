@@ -471,7 +471,7 @@ export default function TestDetailPage() {
       case AttemptStatus.NOT_STARTED:
         return <Badge variant="outline">Not Started</Badge>;
       case AttemptStatus.IN_PROGRESS:
-        return <Badge className="bg-blue-500">In Progress</Badge>;
+        return <Badge className="bg-indigo-500">In Progress</Badge>;
       case AttemptStatus.SUBMITTED:
         return <Badge className="bg-yellow-500">Submitted</Badge>;
       case AttemptStatus.EVALUATED:
@@ -485,7 +485,7 @@ export default function TestDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading test...</p>
         </div>
       </div>
@@ -496,7 +496,7 @@ export default function TestDetailPage() {
   const isMains = test.category === TestCategory.MAINS;
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div className="space-y-2">
@@ -625,45 +625,45 @@ export default function TestDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto gap-1 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200">
+        <TabsList className="flex-wrap h-auto gap-1 bg-gradient-to-r from-indigo-100 to-blue-100 border border-indigo-200">
           <TabsTrigger
             value="settings"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </TabsTrigger>
           <TabsTrigger
             value="instructions"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <ClipboardList className="w-4 h-4 mr-2" />
             Test Instruction
           </TabsTrigger>
           <TabsTrigger
             value="questions"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <BookOpen className="w-4 h-4 mr-2" />
             Question Manager
           </TabsTrigger>
           <TabsTrigger
             value="time"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <Timer className="w-4 h-4 mr-2" />
             Time Settings
           </TabsTrigger>
           <TabsTrigger
             value="grading"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <Award className="w-4 h-4 mr-2" />
             Grading & Summary
           </TabsTrigger>
           <TabsTrigger
             value="result"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Result
@@ -1208,7 +1208,7 @@ export default function TestDetailPage() {
                                 <Badge
                                   key={id}
                                   variant="outline"
-                                  className="bg-blue-50"
+                                  className="bg-indigo-50"
                                 >
                                   {student.name}
                                 </Badge>
@@ -1236,7 +1236,7 @@ export default function TestDetailPage() {
                                 <Badge
                                   key={id}
                                   variant="outline"
-                                  className="bg-purple-50"
+                                  className="bg-rose-50"
                                 >
                                   {faculty.name}
                                 </Badge>
@@ -1416,7 +1416,7 @@ export default function TestDetailPage() {
                 <div className="text-center py-12">
                   {test.question_file_url ? (
                     <div className="space-y-4">
-                      <FileText className="w-12 h-12 mx-auto text-blue-600" />
+                      <FileText className="w-12 h-12 mx-auto text-indigo-600" />
                       <p className="font-medium">{test.question_file_name}</p>
                       <Button variant="outline" asChild>
                         <a
@@ -1653,7 +1653,7 @@ export default function TestDetailPage() {
                           className={
                             test.activation_method === "SCHEDULED"
                               ? "bg-amber-50 border-amber-200 text-amber-700"
-                              : "bg-blue-50 border-blue-200 text-blue-700"
+                              : "bg-indigo-50 border-indigo-200 text-indigo-700"
                           }
                         >
                           {test.activation_method === "SCHEDULED"
@@ -1837,7 +1837,7 @@ export default function TestDetailPage() {
                 </div>
 
                 <Button
-                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  className="bg-gradient-to-r from-indigo-500 to-blue-500"
                   onClick={async () => {
                     try {
                       await dispatch(
@@ -2333,14 +2333,14 @@ function QuestionCard({
       <CardContent className="pt-4">
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+            <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold">
               {question.question_number}
             </span>
             <Badge variant="outline">{question.marks} marks</Badge>
             {question.subject_name && (
               <Badge
                 variant="outline"
-                className="bg-blue-50 text-blue-700 text-xs"
+                className="bg-indigo-50 text-indigo-700 text-xs"
               >
                 {question.subject_name}
               </Badge>
@@ -2348,7 +2348,7 @@ function QuestionCard({
             {question.topic_name && (
               <Badge
                 variant="outline"
-                className="bg-purple-50 text-purple-700 text-xs"
+                className="bg-rose-50 text-rose-600 text-xs"
               >
                 {question.topic_name}
               </Badge>
@@ -2396,12 +2396,12 @@ function QuestionCard({
               variant="ghost"
               size="sm"
               onClick={() => setShowSolution(!showSolution)}
-              className="text-blue-600"
+              className="text-indigo-600"
             >
               {showSolution ? "Hide Solution" : "Show Solution"}
             </Button>
             {showSolution && (
-              <div className="mt-2 p-3 bg-blue-50 rounded text-sm">
+              <div className="mt-2 p-3 bg-indigo-50 rounded text-sm">
                 {question.solution}
               </div>
             )}

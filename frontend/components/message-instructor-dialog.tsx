@@ -76,7 +76,7 @@ export default function MessageInstructorDialog({ courseId }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+        <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white">
           <MessageSquare className="h-4 w-4 mr-2" />
           Message Instructor
         </Button>
@@ -130,7 +130,7 @@ export default function MessageInstructorDialog({ courseId }: Props) {
               sending ||
               courseFaculty.length === 0
             }
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
           >
             <Send className="h-4 w-4 mr-2" />
             {sending ? "Sending..." : "Send Message"}

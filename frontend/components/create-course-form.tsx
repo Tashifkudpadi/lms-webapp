@@ -245,7 +245,7 @@ export default function CreateCourseForm({ children, onSuccess }: CreateCourseFo
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-600" />
+                <BookOpen className="w-5 h-5 text-indigo-600" />
                 Course Details
               </CardTitle>
             </CardHeader>
@@ -363,7 +363,7 @@ export default function CreateCourseForm({ children, onSuccess }: CreateCourseFo
           <Card className="bg-white/60 backdrop-blur-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-                <Globe className="w-5 h-5 text-purple-600" />
+                <Globe className="w-5 h-5 text-rose-500" />
                 Course visibility
               </CardTitle>
             </CardHeader>
@@ -420,12 +420,12 @@ export default function CreateCourseForm({ children, onSuccess }: CreateCourseFo
                       </div>
                     ) : (
                       <div
-                        className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-white/30 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
+                        className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-white/30 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         {uploading ? (
                           <>
-                            <Loader2 className="mx-auto h-12 w-12 text-blue-500 animate-spin" />
+                            <Loader2 className="mx-auto h-12 w-12 text-indigo-500 animate-spin" />
                             <p className="text-sm text-slate-600 mt-2">
                               Uploading...
                             </p>

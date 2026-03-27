@@ -72,7 +72,7 @@ export default function AssignmentsPage() {
   ]
 
   return (
-    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative">
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 relative">
       {/* Dots Background Pattern */}
       <div
         className="absolute inset-0 opacity-25 pointer-events-none"
@@ -87,7 +87,7 @@ export default function AssignmentsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium border border-blue-200">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium border border-indigo-200">
               <TrendingUp className="w-4 h-4" />
               Assignment Hub
             </div>
@@ -95,7 +95,7 @@ export default function AssignmentsPage() {
             <p className="text-muted-foreground text-lg">View and submit your course assignments</p>
           </div>
           <CreateAssignmentForm>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+            <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               Create Assignment
             </Button>
@@ -106,7 +106,7 @@ export default function AssignmentsPage() {
         <Card className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardContent className="p-6">
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200">
+              <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-indigo-100 to-blue-100 border border-indigo-200">
                 <TabsTrigger value="all">All Assignments</TabsTrigger>
                 <TabsTrigger value="in-progress">In Progress</TabsTrigger>
                 <TabsTrigger value="submitted">Submitted</TabsTrigger>

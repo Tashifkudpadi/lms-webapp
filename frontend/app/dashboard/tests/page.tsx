@@ -65,7 +65,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function TestsPageWrapper() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>}>
       <TestsPage />
     </Suspense>
   );
@@ -292,7 +292,7 @@ function TestsPage() {
   };
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative p-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 relative p-6">
       {/* Background Pattern */}
       <div
         className="absolute inset-0 opacity-20 pointer-events-none"
@@ -306,7 +306,7 @@ function TestsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium border border-blue-200">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium border border-indigo-200">
               <GraduationCap className="w-4 h-4" />
               Examination System
             </div>
@@ -327,22 +327,22 @@ function TestsPage() {
             setSelectedSubCategory(null);
           }}
         >
-          <TabsList className="grid w-full max-w-lg grid-cols-3 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200">
+          <TabsList className="grid w-full max-w-lg grid-cols-3 bg-gradient-to-r from-indigo-100 to-blue-100 border border-indigo-200">
             <TabsTrigger
               value="ALL"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
             >
               All Tests
             </TabsTrigger>
             <TabsTrigger
               value={ExamType.UPSC}
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
             >
               UPSC
             </TabsTrigger>
             <TabsTrigger
               value={ExamType.TNPSC}
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-400 data-[state=active]:text-white"
             >
               TNPSC
             </TabsTrigger>
@@ -363,7 +363,7 @@ function TestsPage() {
               {userRole === "admin" && (
                 <Button
                   onClick={openCreateTestDialog}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Test
@@ -420,14 +420,14 @@ function TestsPage() {
                 <TabsList className="bg-slate-100 p-1 rounded-lg shadow-sm">
                   <TabsTrigger
                     value={TestCategory.PRELIMS}
-                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-md transition-all"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-md transition-all"
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
                     Prelims
                   </TabsTrigger>
                   <TabsTrigger
                     value={TestCategory.MAINS}
-                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-md transition-all"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:text-rose-500 data-[state=active]:shadow-md transition-all"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Mains
@@ -453,7 +453,7 @@ function TestsPage() {
                     )}
                     <Button
                       onClick={openCreateTestDialog}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                      className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Test
@@ -693,7 +693,7 @@ function TestsPage() {
                       type="button"
                       variant="link"
                       size="sm"
-                      className="h-auto p-0 text-blue-600"
+                      className="h-auto p-0 text-indigo-600"
                       onClick={() => {
                         setNewSubCategory({
                           ...newSubCategory,
@@ -946,7 +946,7 @@ function TestsPage() {
                           <Badge
                             key={id}
                             variant="secondary"
-                            className="cursor-pointer bg-blue-50"
+                            className="cursor-pointer bg-indigo-50"
                             onClick={() =>
                               setNewTest({
                                 ...newTest,
@@ -1086,7 +1086,7 @@ function TestsPage() {
                               <Badge
                                 key={id}
                                 variant="secondary"
-                                className="cursor-pointer bg-purple-50"
+                                className="cursor-pointer bg-rose-50"
                                 onClick={() =>
                                   setNewTest({
                                     ...newTest,
@@ -1179,7 +1179,7 @@ function TestsPage() {
                 !newTest.passing_marks || newTest.passing_marks <= 0 ||
                 newTest.course_ids.length === 0
               }
-              className="bg-gradient-to-r from-blue-600 to-purple-600"
+              className="bg-gradient-to-r from-indigo-500 to-blue-500"
             >
               Create Test
             </Button>
@@ -1234,7 +1234,7 @@ function TestsPage() {
             <Button
               onClick={handleCreateSubCategory}
               disabled={!newSubCategory.name}
-              className="bg-gradient-to-r from-blue-600 to-purple-600"
+              className="bg-gradient-to-r from-indigo-500 to-blue-500"
             >
               Create
             </Button>
@@ -1327,7 +1327,7 @@ function TestCard({
     ? "from-emerald-500 to-green-500"
     : test.status === TestStatus.ARCHIVED
       ? "from-slate-400 to-slate-500"
-      : "from-amber-400 to-orange-400";
+      : "from-amber-400 to-blue-400";
 
   return (
     <Card className="group overflow-hidden border border-slate-200 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
@@ -1347,8 +1347,8 @@ function TestCard({
         <div className="flex items-center gap-2 mb-4">
           <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-md ${
             isMains
-              ? "bg-purple-600 text-white shadow-sm shadow-purple-200"
-              : "bg-blue-600 text-white shadow-sm shadow-blue-200"
+              ? "bg-rose-500 text-white shadow-sm shadow-rose-200"
+              : "bg-indigo-500 text-white shadow-sm shadow-indigo-200"
           }`}>
             {isMains ? (
               <><FileText className="h-3.5 w-3.5" /> Mains</>
@@ -1472,7 +1472,7 @@ function TestCard({
               <Button
                 asChild
                 size="sm"
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
+                className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white shadow-sm"
               >
                 <Link href={`/dashboard/tests/${test.id}/take`}>
                   <Play className="h-4 w-4 mr-2" />

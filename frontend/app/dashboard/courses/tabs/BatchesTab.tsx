@@ -136,7 +136,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <GraduationCap className="h-6 w-6 text-purple-600" />
+          <GraduationCap className="h-6 w-6 text-rose-500" />
           <h3 className="text-xl font-bold text-slate-900">
             Batches ({pagination.totalItems})
           </h3>
@@ -144,7 +144,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
         {isAdmin && (
           <Button
             onClick={openAddDialog}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+            className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Batch
@@ -199,13 +199,13 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-500" />
+                      <Users className="h-4 w-4 text-indigo-500" />
                       <span className="text-slate-700">{batch.num_learners}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <GraduationCap className="h-4 w-4 text-purple-500" />
+                      <GraduationCap className="h-4 w-4 text-rose-500" />
                       <span className="text-slate-700">{batch.num_faculties}</span>
                     </div>
                   </TableCell>
@@ -292,7 +292,7 @@ export default function BatchesTab({ courseId }: { courseId: string | number }) 
                         variant="outline"
                         disabled={addingBatch}
                         onClick={() => handleAddBatch(batch)}
-                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                        className="text-rose-500 border-rose-200 hover:bg-rose-50"
                       >
                         Add
                       </Button>

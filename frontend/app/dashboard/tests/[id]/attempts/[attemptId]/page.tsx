@@ -90,7 +90,7 @@ export default function AttemptReviewPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading attempt review...</p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function AttemptReviewPage() {
   );
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 p-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="space-y-2">
@@ -139,7 +139,7 @@ export default function AttemptReviewPage() {
         <Card className="bg-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <User className="w-8 h-8 text-blue-600" />
+              <User className="w-8 h-8 text-indigo-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Student ID</p>
                 <p className="text-lg font-bold">{attemptReview.student_id}</p>
@@ -167,7 +167,7 @@ export default function AttemptReviewPage() {
         <Card className="bg-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Clock className="w-8 h-8 text-orange-600" />
+              <Clock className="w-8 h-8 text-rose-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Time Taken</p>
                 <p className="text-lg font-bold">
@@ -238,13 +238,13 @@ export default function AttemptReviewPage() {
               {/* Statistics */}
               <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-indigo-600">
                     {attemptReview.total_questions || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Total</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-2xl font-bold text-rose-500">
                     {attemptReview.attempted_questions || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Attempted</p>
@@ -287,7 +287,7 @@ export default function AttemptReviewPage() {
                 const subjectEntries = Object.entries(subjectScores);
                 if (subjectEntries.length <= 1 && subjectEntries[0]?.[0] === "Uncategorized") return null;
                 return (
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                  <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200">
                     <h4 className="text-sm font-semibold text-slate-700 mb-3">Subject-wise Score</h4>
                     <div className="space-y-2">
                       {subjectEntries.map(([name, data]) => (
@@ -330,17 +330,17 @@ export default function AttemptReviewPage() {
                       <CardContent className="pt-4">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                            <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold">
                               {question.question_number}
                             </span>
                             <Badge variant="outline">{question.marks} marks</Badge>
                             {question.subject_name && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 text-xs">
                                 {question.subject_name}
                               </Badge>
                             )}
                             {question.topic_name && (
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+                              <Badge variant="outline" className="bg-rose-50 text-rose-600 text-xs">
                                 {question.topic_name}
                               </Badge>
                             )}
@@ -400,11 +400,11 @@ export default function AttemptReviewPage() {
                         </div>
 
                         {question.solution && (
-                          <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-                            <p className="text-sm font-medium text-blue-900 mb-1">
+                          <div className="mt-4 p-3 bg-indigo-50 rounded border border-indigo-200">
+                            <p className="text-sm font-medium text-indigo-900 mb-1">
                               Solution:
                             </p>
-                            <p className="text-sm text-blue-800">
+                            <p className="text-sm text-indigo-800">
                               {question.solution}
                             </p>
                           </div>
@@ -432,7 +432,7 @@ export default function AttemptReviewPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center gap-3 mb-2">
-                    <FileText className="w-6 h-6 text-blue-600" />
+                    <FileText className="w-6 h-6 text-indigo-600" />
                     <p className="font-medium">Question Paper</p>
                   </div>
                   {test.question_file_url ? (
@@ -521,7 +521,7 @@ export default function AttemptReviewPage() {
                   <Button
                     onClick={handleEvaluate}
                     disabled={submitting}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    className="bg-gradient-to-r from-indigo-500 to-blue-500"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {submitting ? "Submitting..." : "Submit Evaluation"}

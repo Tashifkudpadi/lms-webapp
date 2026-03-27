@@ -174,7 +174,7 @@ export default function ClassesPage() {
         {isAdmin && (
           <Button
             onClick={() => setShowAddDialog(true)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Class
@@ -231,7 +231,7 @@ export default function ClassesPage() {
                         href={cls.zoom_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                        className="text-indigo-600 hover:underline inline-flex items-center gap-1"
                       >
                         Join <ExternalLink className="h-3 w-3" />
                       </a>
@@ -396,7 +396,7 @@ export default function ClassesPage() {
             <Button
               type="submit"
               disabled={!formData.course_id}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-700 hover:to-blue-500 text-white"
             >
               Create Class
             </Button>

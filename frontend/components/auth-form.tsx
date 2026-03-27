@@ -60,7 +60,7 @@ export default function AuthForm() {
   if (!mounted) {
     return (
       <div className="grid lg:grid-cols-2 min-h-screen">
-        <div className="hidden lg:flex flex-col justify-center px-12 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800" />
+        <div className="hidden lg:flex flex-col justify-center px-12 bg-gradient-to-br from-indigo-600 via-indigo-800 to-slate-900" />
         <div className="flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-pulse">
             <div className="h-10 bg-muted rounded mb-6" />
@@ -108,7 +108,7 @@ export default function AuthForm() {
   return (
     <div className="grid lg:grid-cols-2 min-h-screen">
       {/* Left Side - Welcome Message */}
-      <div className="hidden lg:flex flex-col justify-center px-12 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 text-white relative overflow-hidden">
+      <div className="hidden lg:flex flex-col justify-center px-12 bg-gradient-to-br from-indigo-600 via-indigo-800 to-slate-900 text-white relative overflow-hidden">
         <div className="relative z-10 space-y-8">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -212,7 +212,7 @@ export default function AuthForm() {
         <div className="w-full max-w-md">
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-primary-foreground" />
               </div>
               <h1 className="text-2xl font-bold">EduPlatform</h1>
@@ -229,7 +229,7 @@ export default function AuthForm() {
             <TabsContent value="signin" className="mt-6">
               <Card>
                 <CardHeader className="space-y-1 text-center pb-6">
-                  <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4">
+                  <div className="mx-auto w-12 h-12 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full flex items-center justify-center mb-4">
                     <GraduationCap className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <CardTitle className="text-2xl font-bold">
@@ -312,7 +312,7 @@ export default function AuthForm() {
                       </div>
                     </div>
                     <Button
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                      className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
                       type="submit"
                       disabled={isLoading}
                     >
@@ -333,7 +333,7 @@ export default function AuthForm() {
             <TabsContent value="signup" className="mt-6">
               <Card>
                 <CardHeader className="space-y-1 text-center pb-6">
-                  <div className="mx-auto w-12 h-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full flex items-center justify-center mb-4">
+                  <div className="mx-auto w-12 h-12 bg-gradient-to-r from-indigo-400 to-blue-500 rounded-full flex items-center justify-center mb-4">
                     <User className="w-6 h-6 text-secondary-foreground" />
                   </div>
                   <CardTitle className="text-2xl font-bold">
@@ -455,7 +455,7 @@ export default function AuthForm() {
                       </div>
                     </div>
                     <Button
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                      className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
                       type="submit"
                       disabled={isLoading}
                     >
